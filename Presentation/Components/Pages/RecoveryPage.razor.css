@@ -1,0 +1,71 @@
+﻿.page-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 3rem;
+    padding: 2rem;
+    min-height: 80vh;
+    flex-wrap: wrap;
+}
+
+.service-card {
+    max-width: 400px;
+    text-align: center;
+    max-height: none;
+    overflow: visible;
+    margin-bottom: 5rem;
+}
+
+    .service-card img {
+        max-width: 100%;
+        height: auto;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-float);
+        margin-top: 1.5rem;
+    }
+
+    .service-card .loader {
+        margin-top: 4rem;
+    }
+
+.row {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 2rem;
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+.button-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    margin: 0.5rem 0.5rem;
+}
+
+.loader {
+    position: absolute;
+    bottom: 13%;
+    right: 3%;
+    width: clamp(0.7rem, 4vw, 1.6rem);
+    height: clamp(0.7rem, 4vw, 1.6rem);
+    z-index: 3;
+}
+
+.text {
+    font-weight: 600;
+    font-size: clamp(0.8rem, 5vw, 1rem);
+    margin-bottom: 1rem;
+    color: var(--clr-on-primary);
+}
+
+.service-message {
+    background: color-mix(in oklab, var(--clr-secondary) 35%, transparent);
+    backdrop-filter: blur(10px) saturate(100%);
+    -webkit-backdrop-filter: blur(10px) saturate(100%);
+    margin: 0.2rem;
+}

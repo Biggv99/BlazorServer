@@ -1,0 +1,92 @@
+﻿@using OptimusPrime.Core.Utils
+@using OptimusPrime.Features.Contracts.Commands
+@using OptimusPrime.Features.Contracts.Models
+@using OptimusPrime.Presentation.Components.Elements
+@using OptimusPrime.Presentation.Services
+@using OptimusPrime.Presentation.Utils.States
+@using OptimusPrime.Presentation.Utils.Storage
+
+@inject OptimusPrime.Presentation.Utils.States.DashboardState DashboardCardState
+@inject OptimusPrime.Presentation.Utils.States.JwtTimerState JwtTimerState
+@inject OptimusPrime.Presentation.Utils.Storage.SessionStorage SessionStorage
+@inject OptimusPrime.Presentation.Services.AuthService AuthService
+
+<div class="service-container">
+    <div class="service-switch"> <DashboardSwitch /> </div>
+
+    <div class="service-card">
+        <h2 class="service-titolo ">Accesso</h2>
+
+        <EditForm Model="@command" class="service-form" OnValidSubmit="InviaDati">
+
+            <div class="service-field">
+                <label class="service-label">Email</label>
+                <InputText class="service-input" @bind-Value="command.Email" />
+                <ValidationMessage For="@(() => command.Email)" class="service-error" />
+            </div>
+
+            <div class="service-field">
+                <label class="service-label">Password</label>
+                <InputText type="password" class="service-input" @bind-Value="command.Password" />
+                <ValidationMessage For="@(() => command.Password)" class="service-error" />
+            </div>
+        
+            <button class="button" type="submit">Accedi</button>
+
+            @if(!string.IsNullOrEmpty(messaggioServer)) {
+                <div class="service-message @(DashboardCardState.StatoRichiesta switch {
+                                 StatoRichiesta.Successo => "success",
+                                 StatoRichiesta.Fallimento => "error",
+                                 StatoRichiesta.Elaborazione => "processing",
+                                 _ => ""
+                             })">
+                    @messaggioServer
+                </div>
+            }
+        </EditForm>
+
+        <button @onclick="ToggleMode" type="button" class="button-cambio">Non hai un account? Registrati</button>
+    </div>
+</div>
+
+@code {
+    private string messaggioServer = "";
+    private LoginCommand command = new LoginCommand();
+
+    // effettua il login 
+    private async Task InviaDati() {
+        DashboardCardState.SetRichiestaState(StatoRichiesta.Elaborazione);
+        messaggioServer = "Accesso in corso...";
+
+        try {
+
+            Result<JwtTokenModel> result = await AuthService.Login(command);
+            messaggioServer = result.Message;
+
+            if(result.IsSuccess) {            
+                if(result.Value != null && !string.IsNullOrEmpty(result.Value.AccessToken) && !string.IsNullOrEmpty(result.Value.RefreshToken) && result.Value.AccessExpiresIn > 0) {
+
+                    // salva jwt e attiva timer per refresh
+                    await SessionStorage.SaveTokens(result.Value);
+                    JwtTimerState.SetTimer(result.Value.AccessExpiresIn, result.Value.RefreshExpiresIn);
+
+                    await DashboardCardState.CheckRole();
+                }
+
+                command = new LoginCommand();
+                DashboardCardState.SetRichiestaState(StatoRichiesta.Successo);
+
+            } else {
+                DashboardCardState.SetRichiestaState(StatoRichiesta.Fallimento);
+            }
+
+        } catch {
+            DashboardCardState.SetRichiestaState(StatoRichiesta.Fallimento);
+            messaggioServer = "Impossibile contattare il server";
+        }
+    }
+
+    private void ToggleMode() {
+        DashboardCardState.SetCardState(CardDisplayed.Register);
+    }
+}

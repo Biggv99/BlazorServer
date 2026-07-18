@@ -1,0 +1,74 @@
+﻿@using OptimusPrime.Core.Utils
+@using OptimusPrime.Features.Contracts.Commands
+@using OptimusPrime.Presentation.Components.Elements
+@using OptimusPrime.Presentation.Utils.States
+
+@inject OptimusPrime.Presentation.Utils.States.DashboardState DashboardCardState
+@inject OptimusPrime.Presentation.Utils.States.JwtTimerState JwtTimerState
+@inject OptimusPrime.Presentation.Utils.Storage.SessionStorage SessionStorage
+@inject OptimusPrime.Presentation.Services.AuthService AuthService
+
+<div class="service-container">
+    <div class="service-switch"> <DashboardSwitch /> </div>
+
+    <div class="service-card">
+        <h2 class="service-titolo">Send verification email</h2>
+
+        <div class="service-form">
+            <div class="service-field">
+                <label class="service-label">Email</label>
+                <input type="email" @bind="emailInput" placeholder="Inserisci la tua email..." class="service-input" />
+            </div>
+        </div>
+
+        <button @onclick="InviaDati" type="button" class="button">Send Email</button>
+
+        @if (!string.IsNullOrEmpty(messaggioServer)) {
+            <div class="service-message @(DashboardCardState.StatoRichiesta switch {
+                        StatoRichiesta.Successo => "success",
+                        StatoRichiesta.Fallimento => "error",
+                        StatoRichiesta.Elaborazione => "processing",
+                        _ => ""
+                    })">
+                @messaggioServer
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string messaggioServer = "";
+    private string emailInput = "";
+
+    private async Task InviaDati() {
+
+        // validation check
+        if (string.IsNullOrWhiteSpace(emailInput)) {
+            DashboardCardState.SetRichiestaState(StatoRichiesta.Fallimento);
+            messaggioServer = "Email is missing";
+            return;
+        }
+
+        DashboardCardState.SetRichiestaState(StatoRichiesta.Elaborazione);
+        messaggioServer = "Sending email...";
+
+        try {
+            EmailCommand command = new EmailCommand { Email = emailInput };
+
+            Result<bool> result = await AuthService.ResendConfirmationEmail(command);
+            messaggioServer = result.Message;
+
+            if (result.IsSuccess) {
+                DashboardCardState.SetRichiestaState(StatoRichiesta.Successo);
+                emailInput = ""; 
+
+            } else {
+                DashboardCardState.SetRichiestaState(StatoRichiesta.Fallimento);
+            }
+
+        } catch {
+            DashboardCardState.SetRichiestaState(StatoRichiesta.Fallimento);
+            messaggioServer = "Unable to contact the server";
+        }
+    }
+}

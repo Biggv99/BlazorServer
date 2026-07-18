@@ -1,0 +1,39 @@
+﻿.loader {
+    position: fixed;
+    top: 15%;
+    left: 50%;
+    transform: translate(-50%, 0);
+}
+
+.cards {
+    position: fixed;
+    top: 15%;
+    left: 50%;
+    transform: translate(-50%, 0);
+    z-index: 1;
+    width: 85%;
+    max-height: calc(100vh - 15%);
+    display: grid;
+    justify-content: center;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 200px));
+    gap: 1.5rem;
+    padding: 1rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+    .cards::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .cards::-webkit-scrollbar-thumb {
+        background: var(--clr-secondary);
+        border-radius: var(--radius-md);
+    }
+
+    .cards::after {
+        content: "";
+        display: block;
+        height: 7rem; 
+        grid-column: 1 / -1; 
+    }

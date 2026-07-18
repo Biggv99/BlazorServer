@@ -1,0 +1,140 @@
+﻿@using OptimusPrime.Core.Utils
+@using OptimusPrime.Features.Contracts.Commands
+@using OptimusPrime.Features.Contracts.Models
+@using OptimusPrime.Presentation.Components.Elements
+
+@inject OptimusPrime.Presentation.Utils.States.DashboardState DashboardCardState
+@inject OptimusPrime.Presentation.Utils.Storage.SessionStorage SessionStorage
+@inject OptimusPrime.Presentation.Services.AuditService AuditService
+
+<div class="service-container">
+    <div class="service-switch"> <DashboardSwitch /> </div>
+
+    <div class="service-card">
+        <h2 class="service-titolo">Audit Logs</h2>
+
+        <table class="table-filtri">
+            <tr>
+                <th>Timestamp <input class="filtro-input" value="@filterTimestamp" @oninput='@(e => OnFilterChanged(e, "Timestamp"))' /> </th>
+                <th>UserEmail <input class="filtro-input" value="@filterEmail" @oninput='@(e => OnFilterChanged(e, "Email"))' /> </th>
+                <th>Entity <input class="filtro-input" value="@filterEntity" @oninput='@(e => OnFilterChanged(e, "Entity"))' /> </th>
+                <th>Action <input class="filtro-input" value="@filterAction" @oninput='@(e => OnFilterChanged(e, "Action"))' /> </th>
+                <th>
+                    Result
+                    <select class="filtro-input" value="@filterResult" @onchange='@(e => OnFilterChanged(e, "Result"))'>
+                        <option value="">Tutto</option>
+                        <option value="successo">Successo</option>
+                        <option value="fallimento">Fallimento</option>
+                    </select>
+                </th>
+                <th>Message <input class="filtro-input" value="@filterMessage" @oninput='@(e => OnFilterChanged(e, "Message"))' /> </th>
+            </tr>
+        </table>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>UserEmail</th>
+                    <th>Entity</th>
+                    <th>Action</th>
+                    <th>Result</th>
+                    <th>Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                <Virtualize Context="audit" ItemsProvider="@LoadAudits" @ref="virtualizeComponent">
+                    <ItemContent>
+                        <tr>
+                            <td>@audit.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td>@audit.UserEmail</td>
+                            <td>@audit.EntityName</td>
+                            <td>@audit.ActionType</td>
+                            <td> <span>@(audit.IsSuccess ? "Successo" : "Fallimento")</span> </td>
+                            <td>@audit.Message</td>
+                        </tr>
+                    </ItemContent>
+                </Virtualize>
+            </tbody>
+        </table>
+
+        @if(!string.IsNullOrEmpty(messaggioServer)) {
+            <p class="error">@messaggioServer</p>
+        }
+    </div>
+</div>
+
+@code {
+    private Virtualize<AuditModel>? virtualizeComponent;
+    private string messaggioServer = "";
+
+    // stato dei filtri
+    private string filterTimestamp = "";
+    private string filterEmail = "";
+    private string filterEntity = "";
+    private string filterAction = "";
+    private string filterResult = "";
+    private string filterMessage = "";
+
+    private async Task OnFilterChanged(ChangeEventArgs e, string filterType) {
+        var value = e.Value?.ToString() ?? "";
+
+        switch(filterType) {
+            case "Timestamp":
+                filterTimestamp = value;
+                break;
+            case "Email":
+                filterEmail = value;
+                break;
+            case "Entity":
+                filterEntity = value;
+                break;
+            case "Action":
+                filterAction = value;
+                break;
+            case "Result":
+                filterResult = value;
+                break;
+            case "Message":
+                filterMessage = value;
+                break;
+        }
+
+        try {
+            await Task.Delay(1000);
+            if(virtualizeComponent != null) {
+                await InvokeAsync(() => virtualizeComponent.RefreshDataAsync());
+            }
+
+        } catch(TaskCanceledException) { }
+    }
+
+    private async ValueTask<ItemsProviderResult<AuditModel>> LoadAudits(ItemsProviderRequest request) {
+
+        int take = request.Count == 0 ? 100 : request.Count;
+        int skip = request.StartIndex;
+
+        AuditCommand filters = new AuditCommand {
+            Page = skip,
+            PageSize = take,
+            Timestamp = filterTimestamp,
+            UserEmail = filterEmail,
+            EntityName = filterEntity,
+            ActionType = filterAction,
+            Result = filterResult,
+            Message = filterMessage
+        };
+
+        Result<List<AuditModel>> result = await AuditService.AuditLog(filters);
+
+        var items = result.IsSuccess && result.Value != null ? result.Value : new List<AuditModel>();
+
+        int totalItems = request.StartIndex + items.Count;
+        if(items.Count == take) {
+            totalItems += 1;
+        }
+
+        messaggioServer = result.IsSuccess ? "" : result.Message;
+        return new ItemsProviderResult<AuditModel>(items, totalItems);
+    }
+}

@@ -1,0 +1,20 @@
+﻿<div class="container">
+
+    <img class="icon" src="@IconPath" alt="Icona @Title" />
+
+    <div class="info">
+        <span class="status @(IsHealthy ? "status-healthy" : "status-error")"></span>
+        <h3 class="title">@Title</h3>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? IconPath { get; set; } = null;
+
+    [Parameter]
+    public bool IsHealthy { get; set; } = default;
+}

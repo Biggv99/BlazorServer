@@ -1,0 +1,75 @@
+﻿@page "/"
+@rendermode InteractiveServer
+
+@using OptimusPrime.Presentation.Components.Cards
+@using OptimusPrime.Presentation.Components.Cards.Auth
+@using OptimusPrime.Presentation.Components.Cards.Auth.Password
+@using OptimusPrime.Presentation.Components.Elements
+@using OptimusPrime.Presentation.Utils.States
+
+@inject OptimusPrime.Presentation.Utils.States.DashboardState DashboardCardState
+@implements IDisposable
+
+<PageTitle>Dashboard</PageTitle>
+
+<aside class="aside">
+    <Drawer />
+</aside>
+
+<section class="sezione">
+    @switch (@DashboardCardState.CardState) {
+        case CardDisplayed.Login:
+             <LoginCard />
+             break;
+
+        case CardDisplayed.Register:
+            <RegisterCard />
+            break;
+
+        case CardDisplayed.Refresh:
+            <RefreshCard />
+            break;
+
+        case CardDisplayed.Instruction:
+            <InstructionCard />
+            break;
+        
+        case CardDisplayed.Audit:
+            <AuditCard />
+            break;
+
+        case CardDisplayed.Email:
+            <EmailCard />
+            break;
+            
+        case CardDisplayed.ForgotPassword:
+            <ForgotPasswordCard />
+            break;
+
+        case CardDisplayed.ResetPassword:
+            <ResetPasswordCard />
+            break;
+
+        case CardDisplayed.AppVersion:
+            <AppVersionCard />
+            break;
+    }
+</section>
+
+@code {
+    protected override void OnInitialized() {
+        DashboardCardState.OnChange += OnCardStateChanged;
+    }
+
+    private void OnCardStateChanged() {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() {
+        DashboardCardState.OnChange -= OnCardStateChanged;
+    }
+}
+
+
+
+

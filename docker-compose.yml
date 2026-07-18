@@ -1,0 +1,143 @@
+services:
+
+  # ==========================
+  # 1. PostgreSQL
+  # ==========================
+  postgres:
+    image: postgres:18.3
+    container_name: postgres
+    environment:
+      - POSTGRES_DB=OptimusPrime
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d OptimusPrime"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres_volume:/var/lib/postgresql/
+
+  # ==========================
+  # 2. Redis
+  # ==========================
+  redis:
+    image: redis:8.6.3
+    container_name: redis
+    ports:
+      - 6379:6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - redis_data:/data
+
+  # ==========================
+  # 3. Prometheus
+  # ==========================
+  prometheus:
+    image: prom/prometheus:v3.11.3
+    container_name: prometheus
+    profiles: ["metrics"] 
+    ports:
+      - 9090:9090
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:9090/-/healthy || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    volumes:
+      - ./Config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+
+  # ==========================
+  # 4. Grafana
+  # ==========================
+  grafana:
+    image: grafana/grafana:13.0.1
+    container_name: grafana
+    profiles: ["metrics"] 
+    ports:
+      - 3000:3000
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/api/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 600s
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./Config/grafana.yml:/etc/grafana/provisioning/datasources/grafana.yml
+  
+  # ==========================
+  # 5. Application
+  # ==========================
+  optimus_app:
+    build: .
+    container_name: optimus_prime
+    ports:
+      - 8080:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env 
+    environment:
+      - ASPNETCORE_HTTP_PORTS=8080;9091
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT} #Production, Development
+      - Antiforgery__CookieName=OptimusPrime.AntiForgery.Docker
+      - ConnectionStrings__PostgresConnection=Host=postgres;Port=5432;Database=OptimusPrime;Username=postgres;Password=${POSTGRES_PASSWORD}
+      - ConnectionStrings__RedisConnection=redis:6379,abortConnect=false
+      - AppConfig__BaseUrl=${APPCONFIG_BASEURL}
+
+      # secret
+      - Security__Secret=${SECURITY_SECRET}
+      - Jwt__SecretKey=${JWT_SECRET}
+      
+      # firebase 
+      - Firebase__BaseUrl=${FIREBASE_BASEURL}
+      - Firebase__AuthToken=${FIREBASE_TOKEN}
+      - Firebase__Notification=${FIREBASE_NOTIFICATION}  
+
+      # eke
+      - Eke__Password=${EKE_PASSWORD}
+      - Eke__Iterations=${EKE_ITERATIONS}
+      - Eke__KeyLength=${EKE_KEY_LENGTH}
+      - Eke__ServerKeyB64=${EKE_SERVER_KEY_B64}
+
+      #email
+      - Email__SmtpHost=${EMAIL_HOST}
+      - Email__SmtpPort=${EMAIL_PORT}
+      - Email__Username=${EMAIL_USERNAME}
+      - Email__Password=${EMAIL_PASSWORD}
+      - Email__From=${EMAIL_FROM}
+      - Email__EnableSsl=true
+
+      # flutter application
+      - App__Version=${APP_VERSION}
+      - App__Url=${APP_URL}
+      - App__Description=${APP_DESCRIPTION}
+
+# ==========================
+# Volumi Globali
+# ==========================
+volumes:
+  postgres_volume:
+  prometheus_data:
+  grafana_data:
+  redis_data:

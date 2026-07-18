@@ -1,0 +1,94 @@
+﻿@rendermode InteractiveServer
+
+@using OptimusPrime.Presentation.Utils.States
+@using OptimusPrime.Presentation.Utils.Storage
+
+@inject DashboardState DashboardCardState
+@inject SessionStorage SessionStorage
+
+@implements IDisposable
+
+<div class="drawer-wrapper @(DashboardCardState.IsDrawerOpen ? "open" : "closed")">
+    <ul class="container">
+
+        <li class="menu">
+            <details class="details">
+                <summary class="summary">Auth</summary>
+                <ul class="list">
+                    <li class="menu"> <button type="button" @onclick="() => ChangeState(CardDisplayed.Login)">Login</button> </li>
+                    <li class="menu"> <button type="button" @onclick="() => ChangeState(CardDisplayed.Register)">Register</button> </li>
+                    <li class="menu"> <button type="button" @onclick="() => ChangeState(CardDisplayed.Refresh)">Refresh</button> </li>
+                    <li class="menu"> <button type="button" @onclick="() => ChangeState(CardDisplayed.Email)">Email</button> </li>
+
+                    <li class="menu">
+                        <details class="details">
+                            <summary class="summary">Password</summary>
+                            <ul class="list">
+                                <li class="menu"> <button type="button" @onclick="() => ChangeState(CardDisplayed.ForgotPassword)">Forgot Password</button> </li>
+                                <li class="menu"> <button type="button" @onclick="() => ChangeState(CardDisplayed.ResetPassword)">Reset Password</button> </li>
+                            </ul>
+                        </details>
+                    </li>
+                </ul>
+            </details>
+        </li>
+
+        <li class="menu">
+            <details class="details">
+                <summary class="summary">Instruction</summary>
+                <ul class="list">
+                    <li class="menu"> <button type="button" @onclick="() => ChangeState(CardDisplayed.Instruction)">Instruction</button> </li>
+                </ul>
+            </details>
+        </li>
+
+        <li class="menu">
+            <details class="details">
+                <summary class="summary">Profile</summary>
+                <ul class="list">
+                </ul>
+            </details>
+        </li>
+
+        <li class="menu">
+            <details class="details">
+                <summary class="summary">System</summary>
+                <ul class="list">
+                    <li class="menu"> <button type="button" @onclick="() => ChangeState(CardDisplayed.AppVersion)">App Version</button> </li>
+                </ul>
+            </details>
+        </li>
+
+        @if(DashboardCardState.IsAdmin == true)  {
+            <li class="menu">
+                <details class="details">
+                    <summary class="summary">Audit</summary>
+                    <ul class="list">
+                        <li class="menu"> <button type="button" @onclick="() => ChangeState(CardDisplayed.Audit)">AuditLogs</button> </li>
+                    </ul>
+                </details>
+            </li>
+        }
+    </ul>
+
+    <button class="button" @onclick="DashboardCardState.ToggleDrawer">@(DashboardCardState.IsDrawerOpen ? "◀" : "▶")</button>
+</div>
+
+@code {
+
+    protected override void OnInitialized() {
+        DashboardCardState.OnChange += OnStateChanged;
+    }
+
+    public void Dispose() {
+        DashboardCardState.OnChange -= OnStateChanged;
+    }
+
+    private void OnStateChanged() {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void ChangeState(CardDisplayed mode) {
+        DashboardCardState.SetCardState(mode);
+    }
+}

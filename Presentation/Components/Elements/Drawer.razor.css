@@ -1,0 +1,108 @@
+﻿.drawer-wrapper {
+    display: flex;
+    align-items: center;
+}
+
+.drawer-wrapper.closed .container {
+    display: none;
+}
+
+.drawer-wrapper.open .container {
+    display: block;
+}
+
+.container {
+    width: max(270px, 20vw);
+    height: 70vh;
+    background: linear-gradient( to bottom right, color-mix(in oklab, var(--clr-primary) 100%, transparent), color-mix(in oklab, var(--clr-surface) 50%, transparent) );
+    backdrop-filter: blur(10px) saturate(100%);
+    -webkit-backdrop-filter: blur(10px) saturate(100%);
+    box-shadow: var(--shadow-float);
+    border-radius: 0 24px 24px 0;
+    padding: 1rem 1rem;
+}
+
+.menu {
+    list-style: none;
+    margin-bottom: 0.3rem;
+}
+
+    .menu > button {
+        width: 100%;
+        border: 0;
+        border-radius: var(--radius-md);
+        padding: 0.6rem 0.75rem;
+        text-align: left;
+        font-weight: 500;
+        color: var(--clr-on-primary);
+        background: color-mix(in oklab, var(--clr-primary) 50%, transparent);
+        backdrop-filter: blur(10px) saturate(100%);
+        -webkit-backdrop-filter: blur(10px) saturate(100%);
+        cursor: pointer;
+        transition: background-color 160ms ease, transform 120ms ease;
+        box-shadow: var(--shadow-float);
+    }
+
+    .menu > button:hover {
+        background: color-mix(in oklab, var(--clr-primary) 70%, transparent);
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-float);
+    }
+
+    .menu > button:active {
+        background: color-mix(in oklab, var(--clr-primary) 50%, transparent);
+        transform: translateY(0px);
+    }
+
+.list {
+    list-style: none;
+    margin: 0 0.7rem;
+    padding: 0.8rem 0;
+    display: grid;
+    gap: 0.35rem;
+}
+
+.details {
+    border-radius: var(--radius-md);
+    background: color-mix(in oklab, var(--clr-secondary) 70%, transparent);
+    backdrop-filter: blur(10px) saturate(100%);
+    -webkit-backdrop-filter: blur(10px) saturate(100%);
+    overflow: clip;
+}
+
+.summary {
+    padding: 0.4rem 0.6rem;
+    font-weight: 600;
+    color: var(--clr-on-primary);
+    cursor: pointer;
+}
+
+    .summary:hover {
+        background: color-mix(in oklab, var(--clr-secondary) 70%, transparent);
+    }
+
+    .summary:active {
+        background: color-mix(in oklab, var(--clr-secondary) 30%, transparent);
+    }
+
+/* -- button handler -- */
+.button {
+    padding: 2rem 0.6rem;
+    border-radius: 0 16px 16px 0;
+    border: 2px solid black;
+    border-right: 4px solid black;
+    background-color: var(--clr-primary-hover);
+    color: var(--clr-on-primary);
+}
+
+    .button:hover {
+        background-color: color-mix(in srgb, var(--clr-primary-hover), black 20%);
+        transform: translateX(2px);
+        border-right: 2px solid black;
+    }
+
+    .button:active {
+        background-color: var(--clr-primary-hover);
+        transform: translateX(0px);
+        border-right: 4px solid black;
+    }

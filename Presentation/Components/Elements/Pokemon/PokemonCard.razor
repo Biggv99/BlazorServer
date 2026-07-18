@@ -1,0 +1,41 @@
+﻿@using OptimusPrime.Features.Contracts.Models
+
+@implements IDisposable
+
+<img class="pokemon-card @(isJumping ? "jump" : string.Empty)" src="@pokemon.ImageUrl" alt="@pokemon.Name" />
+
+@code {
+    [Parameter]
+    public PokemonModel pokemon { get; set; } = default!;
+
+    private bool isJumping;
+    private CancellationTokenSource? cancellationTokenSource;
+    private readonly Random random = new();
+
+    protected override void OnInitialized() {
+        cancellationTokenSource = new CancellationTokenSource();
+        _ = StartJumping(cancellationTokenSource.Token);
+    }
+
+    // Fa saltare il pokomon a intervalli casuali
+    private async Task StartJumping(CancellationToken token) {
+     
+        while(!token.IsCancellationRequested) {
+            var nextJumpDelay = TimeSpan.FromSeconds(random.NextDouble() * 8);
+            await Task.Delay(nextJumpDelay, token);
+
+            isJumping = true;
+            await InvokeAsync(StateHasChanged);
+
+            await Task.Delay(1500, token);
+
+            isJumping = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose() {
+        cancellationTokenSource?.Cancel();
+        cancellationTokenSource?.Dispose();
+    }
+}

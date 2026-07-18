@@ -1,0 +1,39 @@
+﻿@rendermode InteractiveServer
+
+@using OptimusPrime.Features.Contracts.Models
+
+@inject OptimusPrime.Presentation.Services.PokemonService PokemonService
+
+@if(isLoading) {
+    <div class="loader"></div>
+
+} else {
+    <div class="pokemon-row">
+        @for(int i = 0; i < RandomPokemons.Count; i++) {
+            <PokemonCard pokemon="@RandomPokemons[i]" />
+        }
+    </div>
+}
+
+<div class="grass">
+    <div class="grass" aria-label="grass pokemon"></div>
+</div>
+
+
+@code {
+    private bool isLoading = true;
+    private List<PokemonModel> RandomPokemons = [];
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+    
+        if (firstRender) {
+            isLoading = true;
+            StateHasChanged(); 
+
+            RandomPokemons = await PokemonService.GetRandomPokemon();
+
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+}

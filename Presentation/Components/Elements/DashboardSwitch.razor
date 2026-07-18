@@ -1,0 +1,18 @@
+﻿@inject OptimusPrime.Presentation.Utils.States.DashboardState DashboardCardState
+
+<div class="switch-card">
+    <span class="switch-label @(!DashboardCardState.IsApiMode ? "active" : "inactive")">funzione interna</span>
+    
+    <label class="switch">
+        <input type="checkbox" checked="@DashboardCardState.IsApiMode" @onchange="ToggleMode" />
+        <span class="slider round"></span>
+    </label>
+    
+    <span class="switch-label @(DashboardCardState.IsApiMode ? "active" : "inactive")">endpoint</span>
+</div>
+
+@code {
+    private void ToggleMode(ChangeEventArgs e) {
+        if(e.Value is bool isChecked) DashboardCardState.SetApiMode(isChecked);
+    }
+}

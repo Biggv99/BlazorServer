@@ -1,0 +1,149 @@
+﻿@using OptimusPrime.Features.Contracts.Commands
+@using OptimusPrime.Features.Contracts.Models
+@using OptimusPrime.Core.Utils
+
+@inject OptimusPrime.Presentation.Utils.States.DashboardState DashboardCardState
+@inject OptimusPrime.Presentation.Utils.States.JwtTimerState JwtTimerState
+@inject OptimusPrime.Presentation.Utils.Storage.SessionStorage SessionStorage
+@inject OptimusPrime.Presentation.Services.AuthService AuthService
+@inject ILogger<JwtBanner> Logger
+
+@implements IDisposable
+
+<div class="jwt-timer">
+    <div class="timer-box access-timer">
+        <span>AT</span>
+        <span class="timer-value">@FormataTempo(JwtTimerState.TimeRemainingAccess)</span>
+    </div>
+    <div class="timer-box refresh-timer">
+        <span>RT</span>
+        <span class="timer-value">@FormataTempo(JwtTimerState.TimeRemainingRefresh)</span>
+    </div>
+</div>
+
+@code {
+    private PeriodicTimer? _timer;
+    private CancellationTokenSource? _cts;
+    private bool _isRefreshing = false;
+
+    // ==============================================================================
+    // Avvio e gestione timer per il refresh automatico dei token JWT 
+    // ==============================================================================
+
+    protected override void OnInitialized() {
+        JwtTimerState.OnChange += OnTimerChanged;
+    }
+
+    // ad ogni cambio del timer: aggiorna la UI, ferma il timer e lo riavvia
+    private async void OnTimerChanged() {
+        await InvokeAsync(StateHasChanged);
+        StopTimer();
+        await AvviaTimer();
+    }
+
+    // avvia un nuovo timer che ogni secondo: decrementa i secondi rimanenti, aggiorna la UI e gestisce il refresh automatico
+    private async Task AvviaTimer() {
+
+        // controllo se sono presenti i token
+        JwtTokenModel? jwt = await SessionStorage.GetToken();
+        if(jwt == null || string.IsNullOrEmpty(jwt.AccessToken) || string.IsNullOrEmpty(jwt.RefreshToken)) {
+            StopTimer();
+            return;
+        }
+
+        _cts = new CancellationTokenSource();
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        _isRefreshing = false;
+
+        await Task.Run(async () => {
+            try {
+                while(await _timer.WaitForNextTickAsync(_cts.Token)) {
+
+                    // decrementa e aggiorna i secondi
+                    JwtTimerState.DecrementaSecondi();
+                    await InvokeAsync(StateHasChanged);
+
+                    // refresh automatico
+                    if(JwtTimerState.TimeRemainingAccess.TotalSeconds <= 30 && !_isRefreshing) {
+                        _isRefreshing = true;
+                        await InvokeAsync(EseguiRefreshAutomatico);
+                    }
+
+                    // ferma il timer 
+                    if(JwtTimerState.TimeRemainingAccess.TotalSeconds <= 0 && JwtTimerState.TimeRemainingRefresh.TotalSeconds <= 0) {
+                        StopTimer();
+                        break;
+                    }
+                }
+
+            } catch(OperationCanceledException) {
+                Logger.LogInformation("Refresh Background arrestato regolarmente");
+            } catch(Exception ex) {
+                Logger.LogError("Errore imprevisto nel timer del refresh: {Message}", ex.Message);
+            }
+        });
+    }
+
+    // effettua il refresh automatico
+    private async Task EseguiRefreshAutomatico() {
+        try {
+
+            // prendo access e refresh token dalla sessione
+            JwtTokenModel? jwt = await SessionStorage.GetToken();
+            if(jwt == null || string.IsNullOrEmpty(jwt.AccessToken) || string.IsNullOrEmpty(jwt.RefreshToken)) {
+                StopTimer();
+                return;
+            }
+
+            RefreshCommand refresh = new RefreshCommand {
+                RefreshToken = jwt.RefreshToken,
+            };
+
+            Result<JwtTokenModel> result = await AuthService.Refresh(refresh);
+
+            if(result.IsSuccess) {
+                if(result.Value != null && !string.IsNullOrEmpty(result.Value.AccessToken) && !string.IsNullOrEmpty(result.Value.RefreshToken) && result.Value.AccessExpiresIn > 0) {
+
+                    // salva jwt e attiva timer per refresh
+                    await SessionStorage.SaveTokens(result.Value);
+                    JwtTimerState.SetTimer(result.Value.AccessExpiresIn, result.Value.RefreshExpiresIn);
+                }
+
+                Logger.LogInformation("Refresh automatico completato con successo.");
+
+            } else {
+                Logger.LogWarning("Refresh automatico fallito: {Message}", result.Message);
+                StopTimer();
+            }
+
+        } catch(Exception ex) {
+            Logger.LogError("Errore di rete durante il refresh automatico: {Message}", ex.Message);
+            _isRefreshing = false; 
+        }
+    }
+
+    private void StopTimer() {
+        _cts?.Cancel();
+        _timer?.Dispose();
+    }
+
+    public void Dispose() {
+        JwtTimerState.OnChange -= OnTimerChanged;
+        StopTimer();
+    }
+
+    private string FormataTempo(TimeSpan ts) {
+        if(ts.TotalSeconds <= 0)
+            return "00:00";
+
+        if(ts.TotalDays >= 1) {
+            return $"{ts.Days}g {ts.Hours:D2}:{ts.Minutes:D2}:{ts.Seconds:D2}";
+        }
+
+        if(ts.Hours >= 1) {
+            return $"{ts.Hours:D2}:{ts.Minutes:D2}:{ts.Seconds:D2}";
+        }
+
+        return $"{ts.Minutes:D2}:{ts.Seconds:D2}";
+    }
+}

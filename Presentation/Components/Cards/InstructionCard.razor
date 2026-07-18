@@ -1,0 +1,75 @@
+﻿@using OptimusPrime.Core.Utils
+@using OptimusPrime.Features.Contracts.Commands
+@using OptimusPrime.Presentation.Components.Elements
+@using OptimusPrime.Presentation.Utils.States
+
+@inject OptimusPrime.Presentation.Services.InstructionService ComandoService
+@inject OptimusPrime.Presentation.Utils.States.DashboardState DashboardCardState
+@inject OptimusPrime.Presentation.Utils.States.JwtTimerState JwtTimerState
+@inject OptimusPrime.Presentation.Utils.Storage.SessionStorage SessionStorage
+
+
+<div class="service-container">
+    <div class="service-switch"> <DashboardSwitch /> </div>
+
+    <div class="service-card">
+        <h2 class="service-titolo">Instruction</h2>
+
+        <EditForm Model="@instruction" class="service-form" OnValidSubmit="InviaDati">
+
+            <div class="service-field">
+                <label class="service-label">Nome instruction</label>
+                <InputText class="service-input" @bind-Value="instruction.Tipo" />
+                <ValidationMessage For="@(() => instruction.Tipo)" class="service-validator " />
+            </div>
+
+            <div class="service-field">
+                <label class="service-label">Valore</label>
+                <InputNumber id="instruction-valore" class="service-input" @bind-Value="instruction.Valore" />
+                <ValidationMessage For="@(() => instruction.Valore)" class="service-validator" />
+            </div>
+            
+            <button class="button" type="submit">invia instruction</button>
+
+            @if(!string.IsNullOrEmpty(messaggioServer)) {
+                <div class="service-message @(DashboardCardState.StatoRichiesta switch {
+                                 StatoRichiesta.Successo => "success",
+                                 StatoRichiesta.Fallimento => "error",
+                                 StatoRichiesta.Elaborazione => "processing",
+                                 _ => ""
+                             })">
+                    @messaggioServer
+                </div>
+            }
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private InstructionCommand instruction = new InstructionCommand();
+    private string messaggioServer = "";
+
+    // invio instruction al database 
+    private async Task InviaDati() {
+        DashboardCardState.SetRichiestaState(StatoRichiesta.Elaborazione);
+        messaggioServer = "Invio instruction in corso...";
+
+        try {
+
+            Result<bool> result = await ComandoService.Instruction(instruction);
+            messaggioServer = result.Message;
+
+            if(result.IsSuccess) {
+                instruction = new InstructionCommand();
+                DashboardCardState.SetRichiestaState(StatoRichiesta.Successo);
+
+            } else {
+                DashboardCardState.SetRichiestaState(StatoRichiesta.Fallimento);
+            }
+
+        } catch {
+            DashboardCardState.SetRichiestaState(StatoRichiesta.Fallimento);
+            messaggioServer = "Impossibile contattare il server";
+        }
+    }
+}

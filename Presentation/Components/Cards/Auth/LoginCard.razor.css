@@ -1,0 +1,14 @@
+﻿.button {
+    display: block;
+    margin: 1rem auto 1rem;
+}
+
+.button-cambio {
+    border: none;
+    background: transparent;
+    color: var(--clr-on-primary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}

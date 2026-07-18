@@ -1,0 +1,96 @@
+﻿@using OptimusPrime.Features.Contracts.Commands
+@using OptimusPrime.Core.Utils
+@using OptimusPrime.Presentation.Components.Elements
+@using OptimusPrime.Presentation.Utils.States
+
+@inject OptimusPrime.Presentation.Utils.States.DashboardState DashboardCardState
+@inject OptimusPrime.Presentation.Services.AuthService AuthService
+
+<div class="service-container">
+    <div class="service-switch"> <DashboardSwitch /> </div>
+
+    <div class="service-card">
+        <h2 class="service-titolo">Registrazione</h2>
+
+        <EditForm Model="@command" class="service-form" OnValidSubmit="InviaDati">
+
+            <div class="service-field">
+                <label class="service-label">Email</label>
+                <InputText class="service-input" @bind-Value="command.Email" />
+                <ValidationMessage For="@(() => command.Email)" class="service-error" />
+            </div>
+
+            <div class="service-field">
+                <label class="service-label">Password</label>
+                <InputText type="password" class="service-input" @bind-Value="command.Password" />
+                <ValidationMessage For="@(() => command.Password)" class="service-error" />
+            </div>
+
+            <div class="service-field">
+                <label class="service-label">Conferma password</label>
+                <InputText type="password" class="service-input" @bind-Value="confermaPasswordInput" />
+            
+                @if(mostraErroreConferma) {
+                    <div class="service-error">Le password non corrispondono.</div>
+                }
+            </div>
+        
+            <button class="button" type="submit">Registrati</button>
+
+            @if(!string.IsNullOrEmpty(messaggioServer)) {
+                <div class="service-message @(DashboardCardState.StatoRichiesta switch {
+                                 StatoRichiesta.Successo => "success",
+                                 StatoRichiesta.Fallimento => "error",
+                                 StatoRichiesta.Elaborazione => "processing",
+                                 _ => ""
+                             })">
+                    @messaggioServer
+                </div>
+            }
+        </EditForm>
+
+        <button @onclick="ToggleMode" type="button" class="button-cambio">Hai già un account? Accedi</button>
+    </div>
+</div>
+
+@code {
+    private string messaggioServer = "";
+    private string confermaPasswordInput = "";
+    private bool mostraErroreConferma = false;
+    private RegisterCommand command = new RegisterCommand();
+
+    // effettua il register 
+    private async Task InviaDati() {
+        mostraErroreConferma = false;
+        if(command.Password != confermaPasswordInput) {
+            mostraErroreConferma = true;
+            return; 
+        }
+
+        DashboardCardState.SetRichiestaState(StatoRichiesta.Elaborazione);
+        messaggioServer = "Registrazione in corso...";
+
+        try {
+
+            Result<bool> result = await AuthService.Register(command);
+            messaggioServer = result.Message;
+
+            if(result.IsSuccess) {
+                command = new RegisterCommand();
+                confermaPasswordInput = "";
+                DashboardCardState.SetRichiestaState(StatoRichiesta.Successo);
+
+            } else {
+                DashboardCardState.SetRichiestaState(StatoRichiesta.Fallimento);
+            }
+
+        } catch {
+            DashboardCardState.SetRichiestaState(StatoRichiesta.Fallimento);
+            messaggioServer = "Impossibile contattare il server";
+        }
+    }
+
+    private void ToggleMode() {
+        DashboardCardState.SetCardState(CardDisplayed.Login);
+    }
+}

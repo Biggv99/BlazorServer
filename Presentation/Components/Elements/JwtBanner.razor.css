@@ -1,0 +1,24 @@
+﻿.jwt-timer {
+    display: flex;
+    gap: clamp(0.3rem, 1vw, 0.5rem)
+}
+
+.timer-box {
+    display: flex;
+    align-items: center;
+    background: var(--clr-secondary);
+    border-radius: 0 0 16px 16px;
+    font-family: monospace;
+
+    gap: clamp(0.2rem, 1.5vw, 0.5rem);
+    padding: clamp(0.3rem, 1.5vw, 0.4rem) clamp(0.6rem, 2vw, 1rem);
+    font-size: clamp(0.75rem, 2.5vw, 1rem);
+}
+
+.access-timer {
+    color: #0ea5e9; 
+}
+
+.refresh-timer {
+    color: #f59e0b; 
+}

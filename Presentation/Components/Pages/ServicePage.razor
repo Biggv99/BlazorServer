@@ -1,0 +1,48 @@
+﻿@page "/services"
+@rendermode InteractiveServer
+
+@using OptimusPrime.Presentation.Components.Elements
+@using OptimusPrime.Presentation.Utils.States
+@implements IDisposable
+
+@inject HealthState HealthState
+
+<PageTitle>Services</PageTitle>
+
+@if(!HealthState.Servizi.Any()) {
+        <div class="loader"></div>
+} else {
+    <section class="cards">
+        @foreach(var servizio in HealthState.Servizi) {
+            <HealthBanner Title="@servizio.Name"
+                        IsHealthy="servizio.IsActive"
+                        IconPath="@GetIconForService(servizio.Name)" />
+        }
+    </section>
+}
+
+
+@code {
+    protected override void OnInitialized() {
+        HealthState.OnChange += RidisegnaUI;
+    }
+
+    public void Dispose() {
+        HealthState.OnChange -= RidisegnaUI;
+    }
+
+    private void RidisegnaUI() {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string GetIconForService(string name) {
+        return name.ToLower() switch {
+            "firebase" => "Images/Services/firebase-icon.webp",
+            "postgres" => "Images/Services/postgres-icon.webp",
+            "prometheus" => "Images/Services/prometheus-icon.webp",
+            "grafana" => "Images/Services/grafana-icon.webp",
+            "redis" => "Images/Services/redis-icon.webp",
+            _ => ""
+        };
+    }
+}

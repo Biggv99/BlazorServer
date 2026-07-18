@@ -1,0 +1,43 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <ResourcePreloader />
+    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <link rel="stylesheet" href="@Assets["OptimusPrime.styles.css"]" />
+    <link rel="icon" type="image/webp" href="@Assets["Images/favicon-pokeball.webp"]" />
+
+    <!-- font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter&family=Lora&family=Montserrat&family=Playfair+Display" rel="stylesheet">
+
+    <ImportMap />
+    <HeadOutlet />
+</head>
+
+<body>
+    <Routes />
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+    
+    
+    <!-- download qr code -->
+    <script>
+        window.downloadQR = function (fileName, fileUrl) {
+            const link = document.createElement('a');
+            link.href = fileUrl;
+            link.download = fileName;
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+    </script>
+
+</body>
+
+</html>
+

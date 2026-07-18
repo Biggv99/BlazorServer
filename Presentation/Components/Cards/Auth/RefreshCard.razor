@@ -1,0 +1,77 @@
+﻿@using OptimusPrime.Features.Contracts.Commands
+@using OptimusPrime.Features.Contracts.Models
+@using OptimusPrime.Core.Utils
+@using OptimusPrime.Presentation.Components.Elements
+@using OptimusPrime.Presentation.Utils.States
+
+@inject OptimusPrime.Presentation.Utils.States.DashboardState DashboardCardState
+@inject OptimusPrime.Presentation.Utils.States.JwtTimerState JwtTimerState
+@inject OptimusPrime.Presentation.Utils.Storage.SessionStorage SessionStorage
+@inject OptimusPrime.Presentation.Services.AuthService AuthService
+
+<div class="service-container">
+    <div class="service-switch"> <DashboardSwitch /> </div>
+
+    <div class="service-card">
+        <h2 class="service-titolo">Refresh Token</h2>
+
+        <button @onclick="InviaDati" type="button" class="button">Effettua Refresh del token</button>
+
+        @if(!string.IsNullOrEmpty(messaggioServer)) {
+            <div class="service-message @(DashboardCardState.StatoRichiesta switch {
+                             StatoRichiesta.Successo => "success",
+                             StatoRichiesta.Fallimento => "error",
+                             StatoRichiesta.Elaborazione => "processing",
+                             _ => ""
+                         })">
+                @messaggioServer
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string messaggioServer = "";
+
+    // effettua il refresh del token 
+    private async Task InviaDati() {
+        DashboardCardState.SetRichiestaState(StatoRichiesta.Elaborazione);
+        messaggioServer = "Refresh in corso...";
+
+        try {
+
+            // prendo access e refresh token dalla sessione
+            JwtTokenModel? jwt = await SessionStorage.GetToken();
+            if(jwt == null || string.IsNullOrEmpty(jwt.AccessToken) || string.IsNullOrEmpty(jwt.RefreshToken)) {
+                DashboardCardState.SetRichiestaState(StatoRichiesta.Fallimento);
+                messaggioServer = "Nessun token di sessione trovato. Effettua di nuovo il login.";
+                return;
+            }
+
+            RefreshCommand command = new RefreshCommand {
+                RefreshToken = jwt.RefreshToken
+            };
+
+            Result<JwtTokenModel> result = await AuthService.Refresh(command);
+            messaggioServer = result.Message;
+
+            if(result.IsSuccess) {
+                if(result.Value != null && !string.IsNullOrEmpty(result.Value.AccessToken) && !string.IsNullOrEmpty(result.Value.RefreshToken) && result.Value.AccessExpiresIn > 0) {
+
+                    // salva jwt e attiva timer per refresh
+                    await SessionStorage.SaveTokens(result.Value);
+                    JwtTimerState.SetTimer(result.Value.AccessExpiresIn, result.Value.RefreshExpiresIn);
+                }
+
+                DashboardCardState.SetRichiestaState(StatoRichiesta.Successo);
+
+            } else {
+                DashboardCardState.SetRichiestaState(StatoRichiesta.Fallimento);
+            }
+
+        } catch {
+            DashboardCardState.SetRichiestaState(StatoRichiesta.Fallimento);
+            messaggioServer = "Impossibile contattare il server";
+        }
+    }
+}

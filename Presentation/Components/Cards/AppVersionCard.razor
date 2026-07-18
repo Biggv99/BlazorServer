@@ -1,0 +1,63 @@
+﻿@using Microsoft.Extensions.Options
+@using OptimusPrime.Core.Utils
+@using OptimusPrime.Features.Contracts.Commands
+@using OptimusPrime.Features.Contracts.Models
+@using OptimusPrime.Presentation.Components.Elements
+@using OptimusPrime.Presentation.Services
+@using OptimusPrime.Presentation.Utils.States
+
+@inject IOptions<OptimusPrime.Core.Settings.AppSettings> AppSettings
+@inject OptimusPrime.Presentation.Utils.States.DashboardState DashboardCardState
+@inject OptimusPrime.Presentation.Utils.States.JwtTimerState JwtTimerState
+@inject OptimusPrime.Presentation.Utils.Storage.SessionStorage SessionStorage
+@inject OptimusPrime.Presentation.Services.SystemService SystemService
+
+<div class="service-container">
+    <div class="service-switch"> <DashboardSwitch /> </div>
+
+    <div class="service-card">
+        <h2 class="service-titolo">Last application version</h2>
+
+        <button @onclick="InviaDati" type="button" class="button">Check for Updates</button>
+
+        @if (!string.IsNullOrEmpty(messaggioServer)) {
+            <div class="service-message @(DashboardCardState.StatoRichiesta switch {
+                     StatoRichiesta.Successo => "success",
+                     StatoRichiesta.Fallimento => "error",
+                     StatoRichiesta.Elaborazione => "processing",
+                     _ => ""
+                 })">
+                @messaggioServer
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string messaggioServer = "";
+
+    private async Task InviaDati() {
+        DashboardCardState.SetRichiestaState(StatoRichiesta.Elaborazione);
+        messaggioServer = "Verifica in corso...";
+
+        try {
+
+            AppVersionCommand command = new AppVersionCommand {
+                AppVersion = AppSettings.Value.Version 
+            };
+
+            Result<AppVersionModel> result = await SystemService.AppVersion(command);
+            messaggioServer = result.Message;
+
+            if(result.IsSuccess) {
+                DashboardCardState.SetRichiestaState(StatoRichiesta.Successo);
+            } else {
+                DashboardCardState.SetRichiestaState(StatoRichiesta.Fallimento);
+            }
+
+        } catch {
+            DashboardCardState.SetRichiestaState(StatoRichiesta.Fallimento);
+            messaggioServer = "Impossibile contattare il server";
+        }
+    }
+}

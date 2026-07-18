@@ -1,0 +1,85 @@
+﻿@rendermode InteractiveServer
+
+@using OptimusPrime.Features.Contracts.Models
+@using OptimusPrime.Presentation.Utils.States
+@using OptimusPrime.Presentation.Utils.Storage
+
+@inject SessionStorage SessionStorage
+@inject JwtTimerState JwtTimerState
+@inject DashboardState DashboardCardState
+@inject NavigationManager NavigationManager
+
+@implements IDisposable
+
+<div class="navbar">
+    <nav class="navbar-items">
+
+        @if(NavigationManager.Uri == NavigationManager.BaseUri) {
+            <button @onclick="DashboardCardState.ToggleDrawer" class="button button-drawer">▶</button>
+        } else {
+            <button class="button button-drawer" style="visibility: hidden;"></button>
+        }
+
+        <div class="navlink-group">
+            <NavLink class="button button-nav" ActiveClass="nav-link-active" href="/" Match="NavLinkMatch.All"> Home </NavLink>
+            <NavLink class="button button-nav" ActiveClass="nav-link-active" href="/services" Match="NavLinkMatch.All"> Services </NavLink>
+            <NavLink class="button button-nav" ActiveClass="nav-link-active" href="/recovery" Match="NavLinkMatch.All"> Recovery </NavLink>
+        </div>
+
+        <button @onclick="DashboardCardState.Logout" class="button button-user @(DashboardCardState.IsAdmin.HasValue ? "status-logged" : "status-guest")">
+            <img src="@(DashboardCardState.IsAdmin.HasValue ? "Images/Profile/profile.webp" : "Images/Profile/no-profile.webp")"
+                 alt="Profilo Utente"
+                 class="icon @(DashboardCardState.IsAdmin.HasValue ? "icon-logged" : "icon-guest")">
+        </button>
+    </nav>
+
+    <div class="jwt-timer"> <JwtBanner /> </div>
+</div>
+
+@code {
+    protected override void OnInitialized() {
+        JwtTimerState.OnChange += OnTimerChanged;
+        DashboardCardState.OnChange += OnDashboardChanged;
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    public void Dispose() {
+        JwtTimerState.OnChange -= OnTimerChanged;
+        DashboardCardState.OnChange -= OnDashboardChanged;
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+
+    // forza l'aggiornamento grafico
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    // cambio carta
+    private void OnDashboardChanged() {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    // cambio token: logout o refresh
+    private async void OnTimerChanged() {
+
+        if(!DashboardCardState.IsAdmin.HasValue) {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        JwtTokenModel? jwt = await SessionStorage.GetToken();
+        if(jwt == null || string.IsNullOrEmpty(jwt.AccessToken) || string.IsNullOrEmpty(jwt.RefreshToken)) {
+            if(!DashboardCardState.IsLogoutInProgress)
+                await DashboardCardState.Logout();
+            return;
+        }
+
+        if(JwtTimerState.TimeRemainingAccess.TotalSeconds <= 0 && JwtTimerState.TimeRemainingRefresh.TotalSeconds <= 0) {
+            if(!DashboardCardState.IsLogoutInProgress)
+                await DashboardCardState.Logout();
+            return;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+}

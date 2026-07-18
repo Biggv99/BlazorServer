@@ -1,0 +1,226 @@
+﻿@page "/recovery"
+@rendermode InteractiveServer
+@using OptimusPrime.Features.Contracts.Models
+@using QRCoder
+@using System.Text.Json
+@using ZXing.ImageSharp
+
+@inject OptimusPrime.Presentation.Utils.Storage.SessionStorage SessionStorage
+@inject OptimusPrime.Presentation.Utils.Storage.LocalStorage LocalStorage
+@inject OptimusPrime.Presentation.Utils.States.DashboardState DashboardCardState
+@inject OptimusPrime.Presentation.Services.AuthService AuthService
+@inject ILogger<RecoveryPage> Logger
+@inject IJSRuntime JSRuntime
+
+<div class="page-container">
+
+    <section class="service-card">
+        <label class="text"> Salva QR per non perdere le tue informazioni private:</label>
+
+        @if(!string.IsNullOrEmpty(qr)) {
+            <img src="data:image/png;base64,@qr" alt="QR Code Generato" />
+
+        } else {
+            @if(isLoadingQR) {
+                <div class="loader"></div>
+            } 
+        }
+
+        @if(!string.IsNullOrEmpty(errorQR)) {
+            <p class="service-message">@errorQR</p>
+        }
+
+        <div class="row">
+            <button class="button" @onclick="GenerateQRCode">Rigenera QR</button>
+            <button class="button" @onclick="SalvaQRCode">Salva QR</button>
+
+            <InputFile Id="qr-upload" OnChange="ImportQRCode" accept="image/*" style="display: none;" />
+            <label for="qr-upload" class="button">Recupera dati da QR</label>
+        </div>
+    </section>
+
+    <section class="service-card">
+        <label class="text"> Opzioni varie:</label>
+
+        <div class="button-wrapper">
+            <button class="button" @onclick="DeleteStorage"> Elimina Storage </button>
+            @if(isLoadingStorage) { <div class="loader"></div> }
+            @if(!string.IsNullOrEmpty(errorStorage)) {
+                <p class="service-message">@errorStorage</p>
+            }
+        </div>
+
+        <div class="button-wrapper">
+            <button class="button" @onclick="DeleteDatabase"> Pulisci Database </button>
+            @if(isLoadingDatabase) { <div class="loader"></div> }
+            @if(!string.IsNullOrEmpty(errorDatabase)) { 
+                <p class="service-message">@errorDatabase</p> 
+            }
+        </div>
+    </section>
+
+</div>
+
+@code {
+    private string? qr;
+    private string? qrInfo;
+    private bool isLoadingQR = false;
+    private bool isLoadingStorage = false;
+    private bool isLoadingDatabase = false;
+    private string? errorQR = null;
+    private string? errorStorage = null;
+    private string? errorDatabase = null;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if(firstRender) await GenerateQRCode();
+    }
+
+    // ====================================================
+    // QR Code: generate, save and import
+    // ====================================================
+    private async Task GenerateQRCode() {
+        isLoadingQR = true;
+        qr = null;
+        StateHasChanged();
+
+        byte[] privateKey = await LocalStorage.GetPrivateKey() ?? Array.Empty<byte>();
+        string privateKeyBase64 = Convert.ToBase64String(privateKey);
+        string deviceId = await LocalStorage.GetDeviceId() ?? string.Empty;
+
+        var data = new RecoveryModel {
+            DeviceId = deviceId,
+            PrivateKey = privateKeyBase64
+        };
+
+        qrInfo = JsonSerializer.Serialize(data);
+
+        using QRCodeGenerator qrGenerator = new QRCodeGenerator();
+        using QRCodeData qrCodeData = qrGenerator.CreateQrCode(qrInfo, QRCodeGenerator.ECCLevel.Q);
+        using PngByteQRCode qrCode = new PngByteQRCode(qrCodeData);
+
+        byte[] qrCodeImage = qrCode.GetGraphic(20);
+        qr = Convert.ToBase64String(qrCodeImage);
+
+        isLoadingQR = false;
+        StateHasChanged();
+    }
+
+    private async Task SalvaQRCode() {
+        if(string.IsNullOrEmpty(qr)) return;
+        isLoadingQR = true;
+
+        string fileUrl = $"data:image/png;base64,{qr}";
+        string fileName = "BlazorServerRecovery_QRCode.png";
+
+        await JSRuntime.InvokeVoidAsync("downloadQR", fileName, fileUrl);
+        isLoadingQR = false;
+    }
+
+    private async Task ImportQRCode(InputFileChangeEventArgs e) {
+        isLoadingQR = true;
+        StateHasChanged();
+
+        try {
+            var imageFile = e.File;
+
+            // imposta il peso dell'immagine a 100MB
+            using var stream = imageFile.OpenReadStream(maxAllowedSize: 1024 * 1024 * 100);
+
+            // carica l'immagine in memoria
+            using var image = await SixLabors.ImageSharp.Image.LoadAsync<SixLabors.ImageSharp.PixelFormats.Rgba32>(stream);
+
+            // legge le bar code
+            var reader = new BarcodeReader<SixLabors.ImageSharp.PixelFormats.Rgba32>();
+            var result = reader.Decode(image);
+
+            if(result != null && !string.IsNullOrEmpty(result.Text)) {
+                var importedData = JsonSerializer.Deserialize<RecoveryModel>(result.Text);
+
+                if(importedData != null) {
+                    byte[] privateKeyBytes = Convert.FromBase64String(importedData.PrivateKey);
+                    string deviceId = importedData.DeviceId;
+
+                    await LocalStorage.SetPrivateKey(privateKeyBytes);
+                    await LocalStorage.SetDeviceId(importedData.DeviceId);
+
+                    errorQR = "DONE​";
+                }
+
+            } else {
+                errorQR = "Invalid QR code";
+                Logger.LogError("Invalid QR code imported");    
+            }
+
+        } catch(Exception ex) {
+            errorQR = "Error importing QR code";
+            Logger.LogError("Error importing QR code: {Message}", ex.Message);
+
+        } finally {
+            await GenerateQRCode();
+            isLoadingQR = false;
+            StateHasChanged();
+
+            await Task.Delay(2000);
+            errorQR = null;
+            StateHasChanged();
+        }
+    }
+
+    // ====================================================
+    // Options: clear storage and database
+    // ====================================================
+    private async Task DeleteStorage() {
+        isLoadingStorage = true; 
+        errorStorage = null;
+        StateHasChanged();
+
+        if(DashboardCardState.IsAdmin.HasValue && DashboardCardState.IsAdmin == true) {
+            await LocalStorage.ClearPrivateKey();
+            await LocalStorage.ClearDeviceId();
+            await DashboardCardState.Logout();
+            errorStorage = "DONE";
+
+        } else {
+            errorStorage = "Permissions denied";
+        }
+
+        isLoadingStorage = false;
+        StateHasChanged();
+
+        await Task.Delay(2000);
+        errorStorage = null;
+        StateHasChanged();
+    }
+
+    private async Task DeleteDatabase() {
+        isLoadingDatabase = true;
+        errorDatabase = null;
+        StateHasChanged();
+
+        if(DashboardCardState.IsAdmin.HasValue && DashboardCardState.IsAdmin == true) {
+
+            // clear users
+            var user_result = await AuthService.DeleteAll();
+            if(user_result.IsSuccess) {
+
+                Logger.LogInformation("Users cleared successfully");
+                errorDatabase = "DONE​​";
+                await DashboardCardState.Logout();
+
+            } else {
+                Logger.LogError("Error clearing users: {Message}", user_result.Message);
+                errorDatabase = "Error clearing users";
+            }
+
+        } else {
+            errorDatabase = "Permissions denied";
+        }
+
+        isLoadingDatabase = false;
+        StateHasChanged();
+
+        await Task.Delay(2000);
+        errorDatabase = null;
+        StateHasChanged();
+    }
+}
