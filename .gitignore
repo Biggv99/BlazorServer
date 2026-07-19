@@ -5,9 +5,7 @@
 
 # ============================================== # 
 .env
-appsettings.Development.json
 Utility/
-Migration/
 firebase-adminsdk.json
 # ============================================== # 
 
