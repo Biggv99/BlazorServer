@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using OptimusPrime.Core.Extensions;
 using OptimusPrime.Features.Contracts.Models;
@@ -38,7 +39,17 @@ static class Program {
                 OnShutdown();
             });
 
-            app.UseForwardedHeaders();
+            // ==========================
+            // ForwardedHeaders 
+            // ==========================
+            var forwardedHeadersOptions = new ForwardedHeadersOptions {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            };
+            forwardedHeadersOptions.KnownIPNetworks.Clear(); 
+            forwardedHeadersOptions.KnownProxies.Clear();
+
+            app.UseForwardedHeaders(forwardedHeadersOptions);
+
             app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 
             if(app.Environment.IsDevelopment()) {
@@ -60,7 +71,7 @@ static class Program {
             // ==========================
             // EF Core Migration 
             // ==========================
-            using (var scope = app.Services.CreateScope()) {
+            using(var scope = app.Services.CreateScope()) {
                 var dbContext = scope.ServiceProvider.GetRequiredService<Infrastructure.Database.AppDbcontext>();
                 dbContext.Database.Migrate();
             }
@@ -68,7 +79,7 @@ static class Program {
             app.Logger.LogInformation("Server started 🚀");
             app.Run();
 
-        } catch (Exception ex) {
+        } catch(Exception ex) {
             OnShutdown();
             throw new Exception($"Error during application startup: {ex}", ex);
         }
@@ -76,7 +87,7 @@ static class Program {
 
     // try to catch shutdown event to update firebase status and send notification
     private static void OnShutdown() {
-        if (app == null)
+        if(app == null)
             return;
 
         try {
@@ -91,7 +102,7 @@ static class Program {
 
             app.Logger.LogWarning("Server shutdown. Updated status on Firebase and sent notification");
 
-        } catch (Exception ex) {
+        } catch(Exception ex) {
             app.Logger.LogError("Server shutdown. Error updating status on Firebase: {Message}", ex.Message);
         }
     }
