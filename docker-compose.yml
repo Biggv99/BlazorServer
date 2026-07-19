@@ -101,8 +101,8 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080;9091
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT} #Production, Development
       - Antiforgery__CookieName=OptimusPrime.AntiForgery.Docker
-      - ConnectionStrings__PostgresConnection=Host=postgres;Port=5432;Database=OptimusPrime;Username=postgres;Password=${POSTGRES_PASSWORD}
-      - ConnectionStrings__RedisConnection=redis:6379,abortConnect=false
+      - ConnectionStrings__PostgresConnection=Host=postgres;Port=5432;Database=OptimusPrime;Username=postgres;Password=${POSTGRES_PASSWORD} #Host=192.168.1.6, Host=postgres;
+      - ConnectionStrings__RedisConnection=redis:6379,password=${REDIS_PASSWORD},abortConnect=false #192.168.1.6:6379, redis:6379
       - AppConfig__BaseUrl=${APPCONFIG_BASEURL}
 
       # secret

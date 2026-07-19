@@ -1,4 +1,4 @@
-# 🤖 Optimus Prime 
+# 🤖 Blazor Server: Optimus Prime 
 
 ---
 ### 📌 Overview
