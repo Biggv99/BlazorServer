@@ -11,6 +11,7 @@ public static class EndpointExtension {
 
         // system
         app.MapAppVersionEndpoint();
+        app.MapApplication();
 
         // auth
         app.MapRegisterEndpoint();

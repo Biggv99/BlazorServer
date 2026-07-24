@@ -8,6 +8,7 @@ public static class ApiRoutes {
 
     // system
     public const string AppVersion = "/api/v1/system/app-version";
+    public const string Application  = "/api/v1/system/get-application";
 
     // auth
     public const string Register = "/api/v1/auth/register";

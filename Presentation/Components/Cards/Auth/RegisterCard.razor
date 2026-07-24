@@ -72,7 +72,7 @@
 
         try {
 
-            Result<bool> result = await AuthService.Register(command);
+            Result<bool> result = await AuthService.Registration(command);
             messaggioServer = result.Message;
 
             if(result.IsSuccess) {

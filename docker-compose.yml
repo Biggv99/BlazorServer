@@ -130,7 +130,6 @@ services:
 
       # flutter application
       - App__Version=${APP_VERSION}
-      - App__Url=${APP_URL}
       - App__Description=${APP_DESCRIPTION}
 
 # ==========================

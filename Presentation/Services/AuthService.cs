@@ -31,7 +31,7 @@ public class AuthService(
     // ==========================
     // Registration
     // ==========================
-    public async Task<Result<bool>> Register(RegisterCommand command) {
+    public async Task<Result<bool>> Registration(RegisterCommand command) {
 
         // diffie-hellman
         var (user, tempPrivateKey) = _providerService.ClientRequest(command);

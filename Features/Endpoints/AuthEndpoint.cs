@@ -22,7 +22,7 @@ public static class AuthEndpoint {
             AuthHandler handler, 
             AuditHandler auditHandler ) => {
 
-                const string actionType = "REGISTER";
+                const string actionType = "REGISTRATION";
 
                 // headers extraction
                 var headerResult = command.ExtractHeaders(context, false, false);

@@ -70,11 +70,11 @@ public class AuditHandler(
             IpAddress = request.IpAddress,
             UserAgent = request.UserAgent,
             ActionType = actionType,
-            EntityName = entityName,
+            EntityName = entityName, 
             Message = message,
             UserEmail = email,
             UserId = id,
-            EntityId = id?.ToString() ?? string.Empty,
+            EntityId = request.DeviceId,
             IsSuccess = isSuccess,
         };
 

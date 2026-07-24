@@ -24,10 +24,9 @@ public class SystemHandler(
             return Result<AppVersionModel>.Success("Version is up to date");
         }
 
-        // request: link to download the latest version of the app
+        // request: latest version of the app
         AppVersionModel app = new() {
             AppVersion = _settings.Version,
-            Url = _settings.Url + _settings.Version + ".apk",
             Description = _settings.Description
         };
 
