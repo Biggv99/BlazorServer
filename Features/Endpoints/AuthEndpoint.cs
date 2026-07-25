@@ -85,7 +85,7 @@ public static class AuthEndpoint {
                 return result.ToHttpResult();
 
             })
-            .RequireRateLimiting("Protected")
+            .RequireRateLimiting("Security_secret")
             .AddEndpointFilter<ValidationFilter<ConfirmEmailCommand, ConfirmEmailValidator>>();
     }
 

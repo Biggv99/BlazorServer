@@ -44,7 +44,6 @@ services:
   prometheus:
     image: prom/prometheus:v3.11.3
     container_name: prometheus
-    profiles: ["metrics"] 
     ports:
       - 9090:9090
     healthcheck:
@@ -63,7 +62,6 @@ services:
   grafana:
     image: grafana/grafana:13.0.1
     container_name: grafana
-    profiles: ["metrics"] 
     ports:
       - 3000:3000
     depends_on:
@@ -99,10 +97,10 @@ services:
       - .env 
     environment:
       - ASPNETCORE_HTTP_PORTS=8080;9091
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT} #Production, Development
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
       - Antiforgery__CookieName=OptimusPrime.AntiForgery.Docker
-      - ConnectionStrings__PostgresConnection=Host=postgres;Port=5432;Database=OptimusPrime;Username=postgres;Password=${POSTGRES_PASSWORD} #Host=192.168.1.6, Host=postgres;
-      - ConnectionStrings__RedisConnection=redis:6379,password=${REDIS_PASSWORD},abortConnect=false #192.168.1.6:6379, redis:6379
+      - ConnectionStrings__PostgresConnection=Host=postgres;Port=5432;Database=OptimusPrime;Username=postgres;Password=${POSTGRES_PASSWORD} 
+      - ConnectionStrings__RedisConnection=redis:6379,password=${REDIS_PASSWORD},abortConnect=false 
       - AppConfig__BaseUrl=${APPCONFIG_BASEURL}
 
       # secret
@@ -133,7 +131,7 @@ services:
       - App__Description=${APP_DESCRIPTION}
 
 # ==========================
-# Volumi Globali
+# Global Volumes
 # ==========================
 volumes:
   postgres_volume:

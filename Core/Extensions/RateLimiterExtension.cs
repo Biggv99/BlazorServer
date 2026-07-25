@@ -37,6 +37,13 @@ public static class RateLimiterExtension {
                 limiterOptions.Window = TimeSpan.FromSeconds(10);
                 limiterOptions.QueueLimit = 0;
             });
+
+            // specific limit for public endpoint without the security secret
+            options.AddFixedWindowLimiter(policyName: "Security_secret", limiterOptions => {
+                limiterOptions.PermitLimit = 6;
+                limiterOptions.Window = TimeSpan.FromMinutes(10);
+                limiterOptions.QueueLimit = 0;
+            });
         });
 
         return services;

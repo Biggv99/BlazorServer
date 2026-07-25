@@ -14,7 +14,7 @@ public static class ApiRoutes {
     public const string Register = "/api/v1/auth/register";
     public const string Login = "/api/v1/auth/login";
 
-    public const string ConfirmEmail = "/api/v1/auth/confirm-email";
+    public const string ConfirmEmail = "/public/v1/auth/confirm-email";
     public const string ResendConfirmEmail = "/api/v1/auth/resend-confirm-email";
 
     public const string ForgotPassword = "/api/v1/auth/forgot-password";

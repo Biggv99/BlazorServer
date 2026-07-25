@@ -14,9 +14,14 @@ public static class HeaderExtractor {
         bool requireAccessToken = true,
         bool requireDeviceChallenge = true) {
 
-        // ip address and user agent
+        // ip address 
         command.IpAddress = context.GetClientIpAddress();
-        command.UserAgent = context.GetClientUserAgent();
+
+        // user agent
+        string customUserAgent = context.Request.Headers["x-device-user-agent"].ToString();
+        command.UserAgent = !string.IsNullOrWhiteSpace(customUserAgent)
+            ? customUserAgent
+            : context.GetClientUserAgent();
 
         // device id
         string deviceId = context.Request.Headers["x-device-id"].ToString();
