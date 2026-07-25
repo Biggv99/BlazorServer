@@ -12,7 +12,10 @@ public static class HeaderExtractor {
         this BaseTrackedCommand command,
         HttpContext context,
         bool requireAccessToken = true,
-        bool requireDeviceChallenge = true) {
+        bool requireDeviceChallenge = true,
+        bool requireLoginCheck = false ) {
+
+        bool Loginflagged = false;
 
         // ip address 
         command.IpAddress = context.GetClientIpAddress();
@@ -41,23 +44,37 @@ public static class HeaderExtractor {
         }
 
         // device challenge
-        if (requireDeviceChallenge) {
+        if(requireDeviceChallenge) {
             string signature = context.Request.Headers["x-device-signature"].ToString();
             string timestampStr = context.Request.Headers["x-device-timestamp"].ToString();
 
-            if (string.IsNullOrWhiteSpace(signature) || string.IsNullOrWhiteSpace(timestampStr) || !long.TryParse(timestampStr, out var ts)) {
-                return Result<bool>.Failure("Missing required data: signature", ErrorType.Unauthorized);
-            }
+            long ts = 0;
+            if(string.IsNullOrWhiteSpace(signature) ||
+                string.IsNullOrWhiteSpace(timestampStr) ||
+                !long.TryParse(timestampStr, out ts)) {
 
-            command.DeviceSignature = signature;
-            command.DeviceTimestamp = ts;
+                if(requireLoginCheck) {
+                    Loginflagged = true;
+
+                } else {
+                    return Result<bool>.Failure("Missing required data: signature", ErrorType.Unauthorized);
+                }
+
+            } else {
+                command.DeviceSignature = signature;
+                command.DeviceTimestamp = ts;
+            }
         }
 
-        // check: security secret
+        // security secret
         var securitySettings = context.RequestServices.GetRequiredService<IOptions<SecuritySettings>>().Value;
         var securitySecret = context.Request.Headers["x-security-secret"].ToString();
         if (string.IsNullOrWhiteSpace(securitySecret) || securitySecret != securitySettings.Secret) {
             return Result<bool>.Failure("Invalid security secret", ErrorType.Unauthorized);
+        }
+
+        if(Loginflagged) {
+            return Result<bool>.Success("LoginFlagged");
         }
 
         return Result<bool>.Success(string.Empty);

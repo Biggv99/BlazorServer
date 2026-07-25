@@ -80,7 +80,7 @@ public class AuthService(
         };
 
         // headers
-        if(!await _interceptor.InterceptorHeaders(request, incluseAccessToken: false)) {
+        if(!await _interceptor.InterceptorHeaders(request, incluseAccessToken: false, isLogin: true)) {
             return Result<JwtTokenModel>.Failure("Missing required data. Try logging again", ErrorType.Unauthorized);
         }
 

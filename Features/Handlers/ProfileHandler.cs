@@ -33,7 +33,7 @@ public class ProfileHandler(
 
         // request: return user profile -> da cambiare per ora ritorna solo il ruolo dell'utente
         UserModel user = new() {
-            Ruolo = checkResult.Value.Ruolo
+            Role = checkResult.Value.Role
         };
 
         await _auditHandler.HandleSave(request, actionType, entityName, "Retrieve user information", user.Email, user.Id, true);

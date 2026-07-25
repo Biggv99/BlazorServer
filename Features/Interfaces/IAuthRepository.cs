@@ -5,7 +5,8 @@ namespace OptimusPrime.Features.Interfaces;
 
 public interface IAuthRepository {
     Task<Result<bool>> ExistUser(string email);
-    Task<Result<bool>> SaveUser(UserModel user);
+    Task<Result<bool>> SaveUser(UserModel user, UserDeviceModel initialDevice);
+    Task<Result<bool>> SaveNewDevice(UserModel user, UserDeviceModel newDevice);
 
     Task<Result<UserModel>> ConfirmEmail(string token);
     Task<Result<UserModel>> GetEmailConfirmToken(string email);
@@ -14,7 +15,7 @@ public interface IAuthRepository {
     Task<Result<UserModel>> GetForgotPasswordToken(string email);
     Task<Result<bool>> ChangePassword(string email, string newPassword);
 
-    Task<Result<UserModel>> GetUserSensitive(string email);
+    Task<Result<UserModel>> GetUserSensitive(string email, string deviceId);
 
     Task<Result<bool>> SaveRefreshToken(string email, RefreshTokenModel token);
 

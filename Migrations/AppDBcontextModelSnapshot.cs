@@ -75,6 +75,8 @@ namespace OptimusPrime.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("Audit");
                 });
 
@@ -102,7 +104,43 @@ namespace OptimusPrime.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("Refresh");
+                });
+
+            modelBuilder.Entity("OptimusPrime.Features.Contracts.Models.UserDeviceModel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeviceId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DeviceName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PublicKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Devices");
                 });
 
             modelBuilder.Entity("OptimusPrime.Features.Contracts.Models.UserModel", b =>
@@ -110,10 +148,6 @@ namespace OptimusPrime.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
-
-                    b.Property<string>("DeviceId")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -134,14 +168,10 @@ namespace OptimusPrime.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("PublicKey")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<Guid?>("RefreshTokenId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Ruolo")
+                    b.Property<string>("Role")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -154,8 +184,34 @@ namespace OptimusPrime.Migrations
 
                     b.ToTable("User", t =>
                         {
-                            t.HasCheckConstraint("CK_User_Ruolo", "\"Ruolo\" IN ('Admin', 'Editor', 'Viewer')");
+                            t.HasCheckConstraint("CK_User_Role", "\"Role\" IN ('Admin', 'Editor', 'Viewer')");
                         });
+                });
+
+            modelBuilder.Entity("OptimusPrime.Features.Contracts.Models.AuditModel", b =>
+                {
+                    b.HasOne("OptimusPrime.Features.Contracts.Models.UserModel", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("OptimusPrime.Features.Contracts.Models.RefreshTokenModel", b =>
+                {
+                    b.HasOne("OptimusPrime.Features.Contracts.Models.UserModel", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OptimusPrime.Features.Contracts.Models.UserDeviceModel", b =>
+                {
+                    b.HasOne("OptimusPrime.Features.Contracts.Models.UserModel", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("OptimusPrime.Features.Contracts.Models.UserModel", b =>

@@ -34,8 +34,8 @@ public class DatabaseAuthRepository(
         }
     }
 
-    // save user
-    public async Task<Result<bool>> SaveUser(UserModel user) {
+    // save user and first device
+    public async Task<Result<bool>> SaveUser(UserModel user, UserDeviceModel initialDevice) {
         try {
             bool userExist = await _appDBcontext.User.AnyAsync(u => u.Email == user.Email);
             if(userExist) {
@@ -43,13 +43,32 @@ public class DatabaseAuthRepository(
             }
 
             await _appDBcontext.User.AddAsync(user);
+
+            initialDevice.UserId = user.Id;
+            await _appDBcontext.Devices.AddAsync(initialDevice);
+
             await _appDBcontext.SaveChangesAsync();
 
-            return Result<bool>.Success("User saved successfully");
+            return Result<bool>.Success("User and initial device saved successfully");
 
         } catch(Exception ex) {
             _logger.LogError("Error during saving user: {Message}", ex.Message);
             return Result<bool>.Failure("Error during saving user", ErrorType.InternalError);
+        }
+    }
+
+    // save new device for existing user
+    public async Task<Result<bool>> SaveNewDevice(UserModel user, UserDeviceModel newDevice) {
+        try {
+            newDevice.UserId = user.Id;
+            await _appDBcontext.Devices.AddAsync(newDevice);
+            await _appDBcontext.SaveChangesAsync();
+
+            return Result<bool>.Success("New device added successfully");
+
+        } catch(Exception ex) {
+            _logger.LogError("Error adding new device: {Message}", ex.Message);
+            return Result<bool>.Failure("Error adding device", ErrorType.InternalError);
         }
     }
 
@@ -175,35 +194,28 @@ public class DatabaseAuthRepository(
     }
 
     // retrieve sensitive user information
-    public async Task<Result<UserModel>> GetUserSensitive(string email) {
+    public async Task<Result<UserModel>> GetUserSensitive(string email, string deviceId) {
         try {
             var user = await _appDBcontext.User
-            .Include(u => u.RefreshToken)
-            .Where(u => u.Email == email)
-            .Select(u => new UserModel {
-                Id = u.Id,
-                Email = u.Email,
-                Password = u.Password, 
-                RefreshToken = u.RefreshToken,
-                Ruolo = u.Ruolo,
-                PublicKey = u.PublicKey,
-                DeviceId = u.DeviceId,
-                IsEmailConfirmed = u.IsEmailConfirmed,
-            }).FirstOrDefaultAsync();
+                .Include(u => u.RefreshToken)
+                .FirstOrDefaultAsync(u => u.Email == email);
 
             if(user == null) {
                 _logger.LogWarning("User not found");
                 return Result<UserModel>.Failure("User not found", ErrorType.NotFound);
             }
 
-            return Result<UserModel>.Success(user, "User retrieved successfully");  
+            var device = await _appDBcontext.Devices
+                .FirstOrDefaultAsync(d => d.UserId == user.Id && d.DeviceId == deviceId);
 
-        } catch (Exception ex) {
+            user.CurrentDevice = device;
+            return Result<UserModel>.Success(user, "User retrieved successfully");
+
+        } catch(Exception ex) {
             _logger.LogError("Error during retrieving user: {Message}", ex.Message);
             return Result<UserModel>.Failure("Error during retrieving user", ErrorType.InternalError);
         }
     }
-
 
     // save refresh token
     public async Task<Result<bool>> SaveRefreshToken(string email, RefreshTokenModel token) {

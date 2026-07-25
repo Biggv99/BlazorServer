@@ -15,6 +15,7 @@ public class CheckOptions {
     public bool RequireAdmin { get; set; } = true;
     public bool RequireDeviceId { get; set; } = true;
     public bool RequireSignature { get; set; } = true;
+    public bool LoginFlagged { get; set; } = false;
 }
 
 public class CheckHandler(
@@ -43,7 +44,7 @@ public class CheckHandler(
 
         // user
         if (check.RequireUser && !string.IsNullOrEmpty(email)) {
-            Result<UserModel> userResult = await _repositoryAuth.GetUserSensitive(email);
+            Result<UserModel> userResult = await _repositoryAuth.GetUserSensitive(email, request.DeviceId);
             if (!userResult.IsSuccess || userResult.Value == null) {
                 return Result<UserModel>.Failure(userResult.Message, userResult.Error);
             }
@@ -59,29 +60,46 @@ public class CheckHandler(
             }
 
             // admin 
-            if (check.RequireAdmin && user.Ruolo.ToString() != "Admin") {
+            if (check.RequireAdmin && user.Role.ToString() != "Admin") {
                 return Result<UserModel>.Failure("User not authorized", ErrorType.Unauthorized);
             }
 
             // device id
-            if (check.RequireDeviceId && user.DeviceId != request.DeviceId) {
+            if (check.RequireDeviceId && (user.CurrentDevice == null || user.CurrentDevice.DeviceId != request.DeviceId)) {
+
+                if(check.LoginFlagged) return Result<UserModel>.Success(user, "new device");
+
                 return Result<UserModel>.Failure("Device not authorized", ErrorType.Unauthorized);
             }
 
             // signature 
             if (check.RequireSignature) {
+
+                if(user.CurrentDevice == null || string.IsNullOrEmpty(user.CurrentDevice.PublicKey)) {
+
+                    if(check.LoginFlagged) return Result<UserModel>.Success(user, "new device");
+
+                    return Result<UserModel>.Failure("Device or public key missing for signature validation", ErrorType.Unauthorized);
+                }
+
                 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                 if (!request.DeviceTimestamp.HasValue || Math.Abs(now - request.DeviceTimestamp.Value) > 300000) {
+
+                    if(check.LoginFlagged) return Result<UserModel>.Success(user, "QR recovery");
+
                     return Result<UserModel>.Failure("Expired timestamp", ErrorType.Unauthorized);
                 }
 
                 bool isDeviceValid = _providerService.VerifySignature(
                     request.DeviceTimestamp.ToString()!,
                     request.DeviceSignature,
-                    user.PublicKey
+                    user.CurrentDevice.PublicKey
                 );
 
                 if (!isDeviceValid) {
+
+                    if(check.LoginFlagged) return Result<UserModel>.Success(user, "QR recovery");
+
                     return Result<UserModel>.Failure("Device not authorized", ErrorType.Unauthorized);
                 }
             }

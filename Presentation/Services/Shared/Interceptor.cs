@@ -3,6 +3,7 @@ using OptimusPrime.Core.Security.Crypto;
 using OptimusPrime.Core.Settings;
 using OptimusPrime.Presentation.Utils.Storage;
 using System.Net.Http.Headers;
+using System.Runtime.CompilerServices;
 
 namespace OptimusPrime.Presentation.Services.Shared;
 
@@ -21,7 +22,7 @@ public class Interceptor(
     private readonly SecuritySettings _securitySettings = securitySettings.Value;
     private readonly ILogger<Interceptor> _logger = logger;
 
-    public async Task<bool> InterceptorHeaders(HttpRequestMessage request, bool incluseAccessToken = true, bool includeDeviceSignature = true) {
+    public async Task<bool> InterceptorHeaders(HttpRequestMessage request, bool incluseAccessToken = true, bool includeDeviceSignature = true, bool isLogin = false) {
 
         // security secret
         request.Headers.TryAddWithoutValidation("x-security-secret", _securitySettings.Secret);
@@ -71,13 +72,13 @@ public class Interceptor(
                     request.Headers.Add("x-device-signature", signature);
 
                 } else {
-                    _logger.LogError("Device signature is required, but it's missing");
-                    return false;
+                    _logger.LogWarning("Device signature is required, but it's missing (Key not found)");
+                    if(!isLogin) return false;
                 }
 
             } catch(Exception ex) {
                 _logger.LogWarning("Unable to generate device signature: {Message}", ex.Message);
-                return false;
+                if(!isLogin) return false;
             }
         }
 

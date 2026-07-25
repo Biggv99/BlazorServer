@@ -98,7 +98,7 @@ public static class SecurityExtension {
             };
         });
 
-        services.AddAuthorizationBuilder().AddPolicy("AdminOnly", policy => policy.RequireRole(Role.Admin.ToString()));
+        services.AddAuthorizationBuilder().AddPolicy("AdminOnly", policy => policy.RequireRole(Privileges.Admin.ToString()));
 
         // ==========================
         // Redis: Data Protection 

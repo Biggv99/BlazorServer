@@ -64,9 +64,13 @@ public class AuthHandler(
         var user = new UserModel {
             Email = request.Email,
             Password = _hashProvider.Hash(request.Password),
-            PublicKey = cryptoResult.Value.PublicKey,
-            DeviceId = request.DeviceId,
             EmailConfirmationToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32))
+        };
+
+        var initialDevice = new UserDeviceModel {
+            DeviceId = request.DeviceId,
+            PublicKey = cryptoResult.Value.PublicKey,
+            DeviceName = request.UserAgent,
         };
 
         // link to confirm email
@@ -78,7 +82,7 @@ public class AuthHandler(
         }
 
         // request: save user 
-        Result<bool> salvato = await _repositoryAuth.SaveUser(user);
+        Result<bool> salvato = await _repositoryAuth.SaveUser(user, initialDevice);
         if (!salvato.IsSuccess) {
             await _auditHandler.HandleSave(request, actionType, entityName, salvato.Message, request.Email, user.Id);
             return Result<string>.Failure(salvato);
@@ -91,14 +95,14 @@ public class AuthHandler(
     // ==========================
     // Login
     // ==========================
-    public async Task<Result<JwtTokenModel>> HandleLogin(LoginCommand request) {
+    public async Task<Result<JwtTokenModel>> HandleLogin(LoginCommand request, bool flagged) {
 
         const string actionType = "LOGIN";
 
         // checks
         Result<UserModel> checkResult = await _checkHandler.Check(
             request,
-            new CheckOptions { RequireEmail = false, RequireAdmin = false },
+            new CheckOptions { RequireEmail = false, RequireAdmin = false, LoginFlagged = flagged },
             email: request.Email
         );
 
@@ -110,10 +114,21 @@ public class AuthHandler(
         UserModel user = checkResult.Value;
 
         // check: password
-        bool passwordCorretta = _hashProvider.Verify(request.Password, user.Password);
-        if(!passwordCorretta) {
+        bool correctPassword = _hashProvider.Verify(request.Password, user.Password);
+        if(!correctPassword) {
             await _auditHandler.HandleSave(request, actionType, entityName, "Wrong password", user.Email, user.Id);
             return Result<JwtTokenModel>.Failure("Wrong credentials", ErrorType.Unauthorized);
+        }
+
+        // check: flagged
+        if(checkResult.Message == "new device") {
+            await _auditHandler.HandleSave(request, actionType, entityName, checkResult.Message, user.Email, user.Id);
+            return Result<JwtTokenModel>.Failure(checkResult.Message, ErrorType.Forbidden);
+        }
+
+        if(checkResult.Message == "QR recovery") {
+            await _auditHandler.HandleSave(request, actionType, entityName, checkResult.Message, user.Email, user.Id);
+            return Result<JwtTokenModel>.Failure(checkResult.Message, ErrorType.Forbidden);
         }
 
         // request: save refresh token and return jwt

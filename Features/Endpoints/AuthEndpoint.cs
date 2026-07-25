@@ -50,15 +50,18 @@ public static class AuthEndpoint {
             AuditHandler auditHandler ) => {
 
                 const string actionType = "LOGIN";
+                bool flagged = false;
 
                 // headers extraction
-                var headerResult = command.ExtractHeaders(context, requireAccessToken: false);
+                var headerResult = command.ExtractHeaders(context, requireAccessToken: false, requireLoginCheck: true);
                 if(!headerResult.IsSuccess) {
                     await auditHandler.HandleSave(command, actionType, entityName, headerResult.Message);
                     return Result<JwtTokenModel>.Failure(headerResult).ToHttpResult();
                 }
 
-                Result<JwtTokenModel> result = await handler.HandleLogin(command);
+                if(headerResult.Message == "LoginFlagged") flagged = true;
+
+                Result<JwtTokenModel> result = await handler.HandleLogin(command, flagged);
                 return result.ToHttpResult();
 
             })

@@ -65,8 +65,12 @@ public class HealthNotification(
                 }
             };
 
-            await FirebaseMessaging.DefaultInstance.SendAsync(message);
-            _logger.LogInformation("System notification sent: {Title}", title);
+            string? environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+
+            if(environment != "Development") {
+                await FirebaseMessaging.DefaultInstance.SendAsync(message);
+                _logger.LogInformation("System notification sent: {Title}", title);
+            }
 
         } catch(Exception ex) {
             _logger.LogError("Error sending notification: {Message}", ex.Message);

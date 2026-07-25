@@ -81,7 +81,7 @@ public class DashboardState (
                 return;
             } 
 
-            IsAdmin = result.Value.Ruolo == Role.Admin;
+            IsAdmin = result.Value.Role == Privileges.Admin;
 
         } catch(Exception ex) {
             _logger.LogError($"Errore durante il controllo del ruolo: {ex.Message}");
