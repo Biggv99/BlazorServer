@@ -15,7 +15,10 @@ public class CheckOptions {
     public bool RequireAdmin { get; set; } = true;
     public bool RequireDeviceId { get; set; } = true;
     public bool RequireSignature { get; set; } = true;
+
+    // flags for special cases
     public bool LoginFlagged { get; set; } = false;
+    public bool RefreshFlagged { get; set; } = false;
 }
 
 public class CheckHandler(
@@ -35,8 +38,9 @@ public class CheckHandler(
 
         // email
         if (check.RequireEmail && string.IsNullOrEmpty(email)) {
-            email = _jwtProvider.ExtractEmail(request.AccessToken);
-
+           
+            email = _jwtProvider.ExtractEmail(request.AccessToken, check.RefreshFlagged);
+         
             if (string.IsNullOrEmpty(email)) {
                 return Result<UserModel>.Failure("Invalid email", ErrorType.Unauthorized);
             }

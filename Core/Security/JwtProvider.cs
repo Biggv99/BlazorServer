@@ -63,8 +63,8 @@ public class JwtProvider(
     // Claim extraction
     // ==========================
 
-    public string? ExtractEmail(string token) {
-        var principal = GetPrincipalFromToken(token);
+    public string? ExtractEmail(string token, bool refreshFlagged) {
+        var principal = GetPrincipalFromToken(token, refreshFlagged);
         if (principal == null) return null;
 
         var email = principal.FindFirst(ClaimTypes.Email)?.Value ?? principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
@@ -77,7 +77,7 @@ public class JwtProvider(
     }
 
     public string? ExtractRole(string token) {
-        var principal = GetPrincipalFromToken(token);
+        var principal = GetPrincipalFromToken(token, false);
         if (principal == null) return null;
 
         var role = principal.FindFirst(ClaimTypes.Role)?.Value;
@@ -93,7 +93,7 @@ public class JwtProvider(
     // Helpers
     // ==========================
 
-    private ClaimsPrincipal? GetPrincipalFromToken(string token) {
+    private ClaimsPrincipal? GetPrincipalFromToken(string token, bool refreshFlagged) {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_settings.SecretKey);
 
@@ -104,7 +104,7 @@ public class JwtProvider(
             ValidateAudience = true,
             ValidIssuer = _settings.Issuer,
             ValidAudience = _settings.Audience,
-            ValidateLifetime = true,
+            ValidateLifetime = !refreshFlagged,
             ClockSkew = TimeSpan.Zero,
         };
 

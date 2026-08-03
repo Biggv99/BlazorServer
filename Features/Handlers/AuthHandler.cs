@@ -305,7 +305,7 @@ public class AuthHandler(
         // checks
         Result<UserModel> checkResult = await _checkHandler.Check(
             request,
-            new CheckOptions { RequireAdmin = false }
+            new CheckOptions { RequireAdmin = false, RefreshFlagged = true }
         );
 
         if (!checkResult.IsSuccess || checkResult.Value == null) {

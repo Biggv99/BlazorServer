@@ -9,12 +9,14 @@ public class UserModel {
     [Key]
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Email { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
-    public RefreshTokenModel? RefreshToken { get; set; } = null;
-    public Privileges Role { get; set; } = Privileges.Viewer;
-    public string EmailConfirmationToken { get; set; } = string.Empty;
     public bool IsEmailConfirmed { get; set; } = false;
+    public string EmailConfirmationToken { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
     public string PasswordResetToken { get; set; } = string.Empty;
+    public RefreshTokenModel? RefreshToken { get; set; } = null;
+    public string FirebaseToken { get; set; } = string.Empty;
+    public Privileges Role { get; set; } = Privileges.Viewer;
+
 
     [NotMapped]
     public UserDeviceModel? CurrentDevice { get; set; } = null;
