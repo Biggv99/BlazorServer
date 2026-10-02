@@ -121,14 +121,23 @@ public class AuthHandler(
         }
 
         // check: flagged
-        if(checkResult.Message == "new device") {
-            await _auditHandler.HandleSave(request, actionType, entityName, checkResult.Message, user.Email, user.Id);
-            return Result<JwtTokenModel>.Failure(checkResult.Message, ErrorType.Forbidden);
-        }
+        if(checkResult.Message == "new device" || checkResult.Message == "device desync") {
 
-        if(checkResult.Message == "QR recovery") {
-            await _auditHandler.HandleSave(request, actionType, entityName, checkResult.Message, user.Email, user.Id);
-            return Result<JwtTokenModel>.Failure(checkResult.Message, ErrorType.Forbidden);
+            string randomToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+            string date = DateTime.UtcNow.AddMinutes(15).ToString("yyyyMMddHHmmss");
+            string otpCode = $"{randomToken}{date}";
+      
+            Result<bool> saveOtpResult = await _repositoryAuth.SaveDeviceSyncToken(user.Email, _hashProvider.Hash(otpCode));
+            if(!saveOtpResult.IsSuccess) {
+                await _auditHandler.HandleSave(request, actionType, entityName, saveOtpResult.Message, user.Email, user.Id);
+                return Result<JwtTokenModel>.Failure("Internal error during device verification", ErrorType.InternalError);
+            }
+
+            Result<bool> emailResult = await _emailNotification.SendDeviceSyncEmail(user.Email, otpCode, checkResult.Message);
+
+            string logMessage = emailResult.IsSuccess ? $"OTP sent for {checkResult.Message}" : "Failed to send OTP email";
+            await _auditHandler.HandleSave(request, actionType, entityName, logMessage, user.Email, user.Id);
+            return Result<JwtTokenModel>.Failure("device verification required", ErrorType.Forbidden);
         }
 
         // request: save refresh token and return jwt
@@ -348,6 +357,106 @@ public class AuthHandler(
 
         await _auditHandler.HandleSave(request, actionType, entityName, "Refresh successful", user.Email, user.Id, true);
         return Result<JwtTokenModel>.Success(jwt, "Refresh successful");
+    }
+
+    // ==========================
+    // Reset Device
+    // ==========================
+    public async Task<Result<JwtTokenModel_DeviceReset>> HandleResetDevice(ResetDeviceCommand request) {
+
+        const string actionType = "RESET DEVICE";
+
+        // get user by email and deviceId
+        Result<UserModel> userResult = await _repositoryAuth.GetUserSensitive(request.Email, request.DeviceId);
+        if(!userResult.IsSuccess || userResult.Value == null) {
+            await _auditHandler.HandleSave(request, actionType, entityName, "User not found", request.Email);
+            return Result<JwtTokenModel_DeviceReset>.Failure("Invalid request", ErrorType.Unauthorized);
+        }
+
+        UserModel user = userResult.Value;
+
+        // check: OTP code validity
+        string datePart = request.OtpCode[64..];
+        bool isValidDate = DateTime.TryParseExact(
+            datePart,
+            "yyyyMMddHHmmss",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            out DateTime expirationDate);
+
+        if(!isValidDate || expirationDate < DateTime.UtcNow) {
+            await _auditHandler.HandleSave(request, actionType, entityName, "Expired sync token", user.Email, user.Id);
+            return Result<JwtTokenModel_DeviceReset>.Failure("Security code expired. Please login again.", ErrorType.Unauthorized);
+        }
+
+        // check: device sync token 
+        if(string.IsNullOrEmpty(user.DeviceSyncToken)) {
+            await _auditHandler.HandleSave(request, actionType, entityName, "No device sync token found", user.Email, user.Id);
+            return Result<JwtTokenModel_DeviceReset>.Failure("No verification pending", ErrorType.Forbidden);
+        }
+
+        bool isTokenValid = _hashProvider.Verify(request.OtpCode, user.DeviceSyncToken);
+        if(!isTokenValid) {
+            await _auditHandler.HandleSave(request, actionType, entityName, "Invalid sync token", user.Email, user.Id);
+            return Result<JwtTokenModel_DeviceReset>.Failure("Invalid security code", ErrorType.Unauthorized);
+        }
+
+        // save the new device 
+        var cryptoRequest = new RegisterCommand {
+            Email = request.Email,
+            EncryptedEPub = request.EncryptedEPub,
+            Nonce = request.Nonce,
+            Tag = request.Tag,
+            Salt = request.Salt
+        };
+
+        var cryptoResult = _providerService.ServerExecute(cryptoRequest);
+        if(cryptoResult == null) {
+            await _auditHandler.HandleSave(request, actionType, entityName, "Diffie-Hellman key exchange failed during device reset", request.Email);
+            return Result<JwtTokenModel_DeviceReset>.Failure("Key exchange failed", ErrorType.InternalError);
+        }
+
+        var deviceToSave = new UserDeviceModel {
+            UserId = user.Id,
+            DeviceId = request.DeviceId,
+            PublicKey = cryptoResult.Value.PublicKey,
+            DeviceName = request.UserAgent
+        };
+
+        Result<bool> deviceResult = await _repositoryAuth.UpdateDevice(deviceToSave);
+        if(!deviceResult.IsSuccess) {
+            await _auditHandler.HandleSave(request, actionType, entityName, deviceResult.Message, user.Email, user.Id);
+            return Result<JwtTokenModel_DeviceReset>.Failure("Failed to register device", ErrorType.InternalError);
+        }
+
+        // delete the device sync token
+        await _repositoryAuth.SaveDeviceSyncToken(user.Email, string.Empty);
+
+        // generate new JWT and refresh token
+        JwtTokenModel jwt = _jwtProvider.GenerateToken(user);
+        var refreshToken = new RefreshTokenModel {
+            RefreshToken = _hashProvider.Hash(jwt.RefreshToken),
+            ExpiresOn = DateTime.UtcNow.AddSeconds(jwt.RefreshExpiresIn),
+        };
+
+        Result<bool> refreshResult = await _repositoryAuth.SaveRefreshToken(user.Email, refreshToken);
+        if(!refreshResult.IsSuccess) {
+            await _auditHandler.HandleSave(request, actionType, entityName, refreshResult.Message, user.Email, user.Id);
+            return Result<JwtTokenModel_DeviceReset>.Failure(refreshResult.Message, ErrorType.InternalError);
+        }
+
+        // return the JWT and provisioning blob to the client
+        var responseData = new JwtTokenModel_DeviceReset {
+            TokenType = jwt.TokenType,
+            AccessToken = jwt.AccessToken,
+            RefreshToken = jwt.RefreshToken,
+            AccessExpiresIn = jwt.AccessExpiresIn,
+            RefreshExpiresIn = jwt.RefreshExpiresIn,
+            ProvisioningBlob = cryptoResult.Value.Payload
+        };
+
+        await _auditHandler.HandleSave(request, actionType, entityName, "Device verified, keys provisioned and login successful", user.Email, user.Id, true);
+        return Result<JwtTokenModel_DeviceReset>.Success(responseData, "Device registered securely");
     }
 
     // ==========================

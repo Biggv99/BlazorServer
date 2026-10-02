@@ -246,6 +246,51 @@ public class DatabaseAuthRepository(
         }
     }
 
+    // save device sync token
+    public async Task<Result<bool>> SaveDeviceSyncToken(string email, string otpCode) {
+        try {
+            var user = await _appDBcontext.User.FirstOrDefaultAsync(u => u.Email == email); 
+            if(user == null) {
+                _logger.LogWarning("User not found");
+                return Result<bool>.Failure("User not found", ErrorType.NotFound);
+            }
+
+            user.DeviceSyncToken = otpCode;
+            await _appDBcontext.SaveChangesAsync();
+
+            return Result<bool>.Success("Device sync token saved successfully");
+
+        } catch(Exception ex) {
+            _logger.LogError("Error during saving device sync token: {Message}", ex.Message);
+            return Result<bool>.Failure("Error during saving device sync token", ErrorType.InternalError);
+        }
+    }
+
+    // save or update device for existing user
+    public async Task<Result<bool>> UpdateDevice(UserDeviceModel deviceToSave) {
+        try {
+            var existingDevice = await _appDBcontext.Devices
+                .FirstOrDefaultAsync(d => d.UserId == deviceToSave.UserId && d.DeviceId == deviceToSave.DeviceId);
+
+            // update the existing device if it exists, otherwise add a new one
+            if(existingDevice != null) {
+                existingDevice.PublicKey = deviceToSave.PublicKey;
+                existingDevice.DeviceName = deviceToSave.DeviceName;
+                existingDevice.CreatedOn = DateTime.UtcNow; 
+            } else {
+                await _appDBcontext.Devices.AddAsync(deviceToSave);
+            }
+
+            await _appDBcontext.SaveChangesAsync();
+
+            return Result<bool>.Success("Device updated successfully");
+
+        } catch(Exception ex) {
+            _logger.LogError("Error updating device: {Message}", ex.Message);
+            return Result<bool>.Failure("Error updating device", ErrorType.InternalError);
+        }
+    }
+
     // delete revoked refresh tokens
     public async Task DeleteInvalidRefreshTokens() {
         try {

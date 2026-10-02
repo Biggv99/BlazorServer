@@ -22,6 +22,8 @@ public static class ApiRoutes {
 
     public const string Refresh = "/api/v1/auth/refresh";
 
+    public const string ResetDevice = "/api/v1/auth/reset-device";
+
     // profile
     public const string Me = "/api/v1/profile/me";
 

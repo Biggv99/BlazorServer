@@ -87,9 +87,9 @@ public class CheckHandler(
                 }
 
                 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                if (!request.DeviceTimestamp.HasValue || Math.Abs(now - request.DeviceTimestamp.Value) > 300000) {
+                if (!request.DeviceTimestamp.HasValue || Math.Abs(now - request.DeviceTimestamp.Value) > 60000) {
 
-                    if(check.LoginFlagged) return Result<UserModel>.Success(user, "QR recovery");
+                    if(check.LoginFlagged) return Result<UserModel>.Success(user, "device desync");
 
                     return Result<UserModel>.Failure("Expired timestamp", ErrorType.Unauthorized);
                 }
@@ -102,7 +102,7 @@ public class CheckHandler(
 
                 if (!isDeviceValid) {
 
-                    if(check.LoginFlagged) return Result<UserModel>.Success(user, "QR recovery");
+                    if(check.LoginFlagged) return Result<UserModel>.Success(user, "device desync");
 
                     return Result<UserModel>.Failure("Device not authorized", ErrorType.Unauthorized);
                 }

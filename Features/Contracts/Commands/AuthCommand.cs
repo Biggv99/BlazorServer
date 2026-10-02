@@ -33,3 +33,12 @@ public class ResetPasswordCommand : BaseTrackedCommand {
 public class RefreshCommand : BaseTrackedCommand {
     public string RefreshToken { get; set; } = string.Empty;
 }
+
+public class ResetDeviceCommand : BaseTrackedCommand {
+    public string Email { get; set; } = string.Empty;
+    public string OtpCode { get; set; } = string.Empty;
+    public string EncryptedEPub { get; set; } = string.Empty;
+    public string Nonce { get; set; } = string.Empty;
+    public string Tag { get; set; } = string.Empty;
+    public string Salt { get; set; } = string.Empty;
+}

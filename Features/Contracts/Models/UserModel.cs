@@ -14,6 +14,7 @@ public class UserModel {
     public string Password { get; set; } = string.Empty;
     public string PasswordResetToken { get; set; } = string.Empty;
     public RefreshTokenModel? RefreshToken { get; set; } = null;
+    public string DeviceSyncToken { get; set; } = string.Empty;
     public string FirebaseToken { get; set; } = string.Empty;
     public Privileges Role { get; set; } = Privileges.Viewer;
 

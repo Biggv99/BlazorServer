@@ -149,11 +149,19 @@ namespace OptimusPrime.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("DeviceSyncToken")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("EmailConfirmationToken")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FirebaseToken")
                         .IsRequired()
                         .HasColumnType("text");
 

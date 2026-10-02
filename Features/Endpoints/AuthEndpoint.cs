@@ -199,5 +199,32 @@ public static class AuthEndpoint {
             })
             .RequireRateLimiting("Protected")
             .AddEndpointFilter<ValidationFilter<RefreshCommand, RefreshValidator>>();
-    }    
+    }
+
+    // ==========================
+    // Reset device
+    // ==========================
+    public static void MapResetDeviceEndpoint(this IEndpointRouteBuilder app) {
+        app.MapPost(ApiRoutes.ResetDevice, async (
+            ResetDeviceCommand command,
+            HttpContext context,
+            AuthHandler handler,
+            AuditHandler auditHandler) => {
+
+                const string actionType = "RESET DEVICE";
+
+                // headers extraction
+                var headerResult = command.ExtractHeaders(context, false, false);
+                if(!headerResult.IsSuccess) {
+                    await auditHandler.HandleSave(command, actionType, entityName, headerResult.Message);
+                    return Result<JwtTokenModel_DeviceReset>.Failure(headerResult).ToHttpResult();
+                }
+
+                Result<JwtTokenModel_DeviceReset> result = await handler.HandleResetDevice(command);
+                return result.ToHttpResult();
+
+            })
+            .RequireRateLimiting("Protected")
+            .AddEndpointFilter<ValidationFilter<ResetDeviceCommand, ResetDeviceValidator>>();
+    }
 }

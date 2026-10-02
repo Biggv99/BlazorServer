@@ -7,3 +7,12 @@ public class JwtTokenModel {
     public int AccessExpiresIn { get; set; } = 0;
     public int RefreshExpiresIn { get; set; } = 0;
 }
+
+public class JwtTokenModel_DeviceReset {
+    public string TokenType { get; set; } = "Bearer";
+    public string AccessToken { get; set; } = string.Empty;
+    public string RefreshToken { get; set; } = string.Empty;
+    public int AccessExpiresIn { get; set; } = 0;
+    public int RefreshExpiresIn { get; set; } = 0;
+    public string ProvisioningBlob { get; set; } = string.Empty;
+}

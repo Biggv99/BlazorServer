@@ -19,6 +19,9 @@ public interface IAuthRepository {
 
     Task<Result<bool>> SaveRefreshToken(string email, RefreshTokenModel token);
 
+    Task<Result<bool>> SaveDeviceSyncToken(string email, string otpCode);
+    Task<Result<bool>> UpdateDevice(UserDeviceModel device);
+
     Task<Result<bool>> DeleteAllUsers();
     Task DeleteInvalidRefreshTokens();
 }   

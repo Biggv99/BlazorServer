@@ -70,3 +70,21 @@ public class RefreshValidator : AbstractValidator<RefreshCommand> {
             .NotEmpty().WithMessage("Refresh Token is required");
     }
 }
+
+public class ResetDeviceValidator : AbstractValidator<ResetDeviceCommand> {
+    public ResetDeviceValidator() {
+        RuleFor(x => x.Email)
+            .NotEmpty().WithMessage("Email is required")
+            .EmailAddress().WithMessage("Invalid email format");
+
+        RuleFor(x => x.OtpCode)
+            .NotEmpty().WithMessage("OTP code is required")
+            .Length(78).WithMessage("OTP code must be exactly 78 characters long")
+            .Matches("^[0-9a-fA-F]{64}\\d{14}$").WithMessage("Reset code must contain a 64-char hex token followed by a 14-digit UTC timestamp");
+
+        RuleFor(x => x.EncryptedEPub).NotEmpty().WithMessage("EncryptedEPub is required");
+        RuleFor(x => x.Nonce).NotEmpty().WithMessage("Nonce is required");
+        RuleFor(x => x.Tag).NotEmpty().WithMessage("Tag is required");
+        RuleFor(x => x.Salt).NotEmpty().WithMessage("Salt is required");
+    }
+}

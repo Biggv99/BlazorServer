@@ -25,6 +25,8 @@ public static class EndpointExtension {
 
         app.MapRefreshEndpoint();
 
+        app.MapResetDeviceEndpoint();
+
         // profile
         app.MapMeEndpoint();
 
