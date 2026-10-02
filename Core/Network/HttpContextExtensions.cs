@@ -8,13 +8,23 @@ public static class HttpContextExtensions {
     // IP Address Recovery
     // ==========================
     public static string GetClientIpAddress(this HttpContext context) {
-        var ip = context.Connection.RemoteIpAddress;
 
-        if(ip == null) return string.Empty;
-        if(IPAddress.IsLoopback(ip)) return IPAddress.Loopback.ToString();
-        if(ip.IsIPv4MappedToIPv6) return ip.MapToIPv4().ToString();
+        // from Cloudflare header
+        if(context.Request.Headers.TryGetValue("CF-Connecting-IP", out var cfIp) && !string.IsNullOrWhiteSpace(cfIp)) {
+            return cfIp.ToString();
+        }
 
-        return ip.ToString();
+        // from X-Forwarded-For header
+        if(context.Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor) && !string.IsNullOrWhiteSpace(forwardedFor)) {
+            var ip = forwardedFor.ToString().Split(',')[0].Trim();
+            if(!string.IsNullOrWhiteSpace(ip)) return ip;
+        }
+
+        var remoteIp = context.Connection.RemoteIpAddress;
+        if(remoteIp == null) return string.Empty;
+        if(IPAddress.IsLoopback(remoteIp)) return IPAddress.Loopback.ToString();
+        if(remoteIp.IsIPv4MappedToIPv6) return remoteIp.MapToIPv4().ToString();
+        return remoteIp.ToString();
     }
 
     // ====================================================
