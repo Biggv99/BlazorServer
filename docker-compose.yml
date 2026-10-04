@@ -102,6 +102,7 @@ services:
       - ConnectionStrings__PostgresConnection=Host=postgres;Port=5432;Database=OptimusPrime;Username=postgres;Password=${POSTGRES_PASSWORD} 
       - ConnectionStrings__RedisConnection=redis:6379,password=${REDIS_PASSWORD},abortConnect=false 
       - AppConfig__BaseUrl=${APPCONFIG_BASEURL}
+      - Cors__FrontendUrl=${CORS_FRONTENDURL}
 
       # secret
       - Security__Secret=${SECURITY_SECRET}

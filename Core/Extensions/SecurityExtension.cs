@@ -6,6 +6,7 @@ using OptimusPrime.Core.Security;
 using OptimusPrime.Core.Security.Crypto;
 using OptimusPrime.Core.Settings;
 using OptimusPrime.Features.Contracts.Models;
+using System.Buffers.Text;
 using System.Net;
 using System.Security.Claims;
 using System.Text;
@@ -24,6 +25,23 @@ public static class SecurityExtension {
         services.AddScoped<EcdhProvider>();
         services.AddScoped<EkeProvider>();
         services.AddScoped<ProviderService>();
+
+        // ==========================
+        // Cors
+        // ==========================
+        var frontendUrl = configuration.GetValue<string>("Cors:FrontendUrl");
+        if(string.IsNullOrWhiteSpace(frontendUrl)) throw new Exception("No frontend URL configured");
+
+        services.AddCors(options =>
+        {
+            options.AddPolicy("AllowFrontend", policy =>
+            {
+                policy.WithOrigins(frontendUrl) 
+                      .AllowAnyHeader()
+                      .AllowAnyMethod()
+                      .AllowCredentials();
+            });
+        });
 
         // ==========================
         // Hash

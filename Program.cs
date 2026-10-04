@@ -56,6 +56,8 @@ static class Program {
                 app.MapStaticAssets();
             }
 
+            app.UseCors("AllowFrontend");
+
             app.UseAuthentication();
             app.UseAuthorization();
 
