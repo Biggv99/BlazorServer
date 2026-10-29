@@ -1,6 +1,5 @@
-# 🤖 Blazor Server: Optimus Prime 
+# Blazor Server
 
----
 ### 📌 Overview
 **Optimus Prime** is an **ASP.NET Core Blazor Server** template built around **Minimal APIs**, designed as a secure and observable foundation for internal admin tooling. 
 
